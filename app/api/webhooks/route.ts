@@ -32,9 +32,10 @@ export async function POST(req: Request) {
       return new Response('Webhook secret not found.', { status: 400 });
     event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
     console.log(`🔔  Webhook received: ${event.type}`);
-  } catch (err: any) {
-    console.log(`❌ Error message: ${err.message}`);
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.log(`❌ Error message: ${errorMessage}`);
+    return new Response(`Webhook Error: ${errorMessage}`, { status: 400 });
   }
 
   if (relevantEvents.has(event.type)) {
@@ -78,17 +79,26 @@ export async function POST(req: Request) {
         default:
           console.log(`Unhandled event type ${event.type}`);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.log(error);
-      return new Response(
-        'Webhook handler failed. View your Next.js function logs.',
-        {
-          status: 400
-        }
-      );
+      if (error instanceof Error) {
+        return new Response(
+          `Webhook handler failed with error: ${error.message}`,
+          {
+            status: 500
+          }
+        );
+      } else {
+        return new Response(
+          'Webhook handler failed with unknown error.',
+          {
+            status: 500
+          }
+        );
+      }
     }
   } else {
-    return new Response(`Unsupported event type: ${event.type}`);
+    return new Response(`Unsupported event type: ${event.type}`, { status: 400 });
   }
   return new Response(JSON.stringify({ received: true }));
 }

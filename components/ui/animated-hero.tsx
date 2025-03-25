@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { MoveRight, Calendar, ShoppingCart } from 'lucide-react'
+import { Calendar, ShoppingCart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import Link from 'next/link'
-import { cn } from '@/utils/cn'
 
 function Hero() {
   const [titleNumber, setTitleNumber] = useState(0)

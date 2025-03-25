@@ -8,10 +8,7 @@ import {
   Trash2,
   Mail,
   Phone,
-  ShoppingBag,
-  Calendar,
-  MapPin,
-  User
+  ShoppingBag
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,12 +35,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -56,8 +47,40 @@ import {
 } from '@/components/ui/select'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
+// Define interfaces for customer data
+interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  createdAt: string;
+  lastOrder: string | null;
+  totalOrders: number;
+  totalSpent: number;
+  notes: string;
+  status: string;
+}
+
+interface OrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+interface Order {
+  id: string;
+  customerId: string;
+  orderNumber: string;
+  date: string;
+  status: string;
+  total: number;
+  items: OrderItem[];
+}
+
 // Mock data for customers
-const mockCustomers = [
+const mockCustomers: Customer[] = [
   {
     id: '1',
     name: 'Ján Novák',
@@ -126,7 +149,7 @@ const mockCustomers = [
 ]
 
 // Mock data for orders
-const mockOrders = [
+const mockOrders: Order[] = [
   {
     id: '1001',
     customerId: '1',
@@ -186,12 +209,11 @@ const mockOrders = [
 ]
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState(mockCustomers)
+  const [customers, setCustomers] = useState<Customer[]>(mockCustomers)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [openDialog, setOpenDialog] = useState(false)
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState('all')
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = 
@@ -211,18 +233,18 @@ export default function CustomersPage() {
     setOpenDialog(true)
   }
   
-  const handleEditCustomer = (customer: any) => {
+  const handleEditCustomer = (customer: Customer) => {
     setSelectedCustomer(customer)
     setOpenDialog(true)
   }
   
   const handleDeleteCustomer = (id: string) => {
-    if (confirm('Naozaj chcete odstrániť tohto zákazníka?')) {
+    if (confirm('Naozaj chcete vymazať tohto zákazníka?')) {
       setCustomers(customers.filter(customer => customer.id !== id))
     }
   }
   
-  const handleSaveCustomer = (formData: any) => {
+  const handleSaveCustomer = (formData: Customer) => {
     if (selectedCustomer) {
       // Update existing customer
       setCustomers(customers.map(customer => 
@@ -230,31 +252,21 @@ export default function CustomersPage() {
       ))
     } else {
       // Add new customer
-      const newCustomer = {
-        id: (customers.length + 1).toString(),
+      const newCustomer: Customer = {
         ...formData,
+        id: `${customers.length + 1}`,
         createdAt: new Date().toISOString(),
         lastOrder: null,
         totalOrders: 0,
-        totalSpent: 0,
-        status: 'active'
+        totalSpent: 0
       }
       setCustomers([...customers, newCustomer])
     }
     setOpenDialog(false)
   }
   
-  const getCustomerInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase()
-  }
-  
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Nikdy'
-    
+    if (!dateString) return '-'
     const date = new Date(dateString)
     return new Intl.DateTimeFormat('sk-SK', {
       day: '2-digit',
@@ -268,10 +280,6 @@ export default function CustomersPage() {
       style: 'currency',
       currency: 'EUR'
     }).format(amount)
-  }
-  
-  const getCustomerOrders = (customerId: string) => {
-    return mockOrders.filter(order => order.customerId === customerId)
   }
   
   return (
@@ -317,9 +325,7 @@ export default function CustomersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(
-                mockOrders.reduce((acc, order) => acc + order.total, 0) / mockOrders.length
-              )}
+              {formatCurrency(mockOrders.reduce((acc, order) => acc + order.total, 0) / mockOrders.length)}
             </div>
           </CardContent>
         </Card>
@@ -377,7 +383,7 @@ export default function CustomersPage() {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           <Avatar>
-                            <AvatarFallback>{getCustomerInitials(customer.name)}</AvatarFallback>
+                            <AvatarFallback>{customer.name.split(' ').map(part => part[0]).join('').toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <div>
                             <div>{customer.name}</div>
@@ -473,19 +479,24 @@ function CustomerDialog({
 }: { 
   open: boolean, 
   onOpenChange: (open: boolean) => void, 
-  customer: any | null,
-  onSave: (formData: any) => void
+  customer: Customer | null,
+  onSave: (formData: Customer) => void
 }) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Partial<Customer>>({
+    id: customer?.id || '',
     name: customer?.name || '',
     email: customer?.email || '',
     phone: customer?.phone || '',
     address: customer?.address || '',
     notes: customer?.notes || '',
-    status: customer?.status || 'active'
+    status: customer?.status || 'active',
+    createdAt: customer?.createdAt || '',
+    lastOrder: customer?.lastOrder || null,
+    totalOrders: customer?.totalOrders || 0,
+    totalSpent: customer?.totalSpent || 0
   })
   
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: keyof Customer, value: string | number) => {
     setFormData({
       ...formData,
       [field]: value
@@ -494,7 +505,7 @@ function CustomerDialog({
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData)
+    onSave(formData as Customer)
   }
   
   return (

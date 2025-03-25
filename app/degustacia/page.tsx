@@ -10,19 +10,29 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Wine, Users, Clock, Euro, Loader2 } from 'lucide-react'
-import Image from 'next/image'
 import { type SelectSingleEventHandler } from 'react-day-picker'
 import { useRouter } from 'next/navigation'
 
 // Typy degustácií
-type TastingType = {
-  id: string
-  name: string
-  description: string
-  duration: number // v minútach
-  price: number
-  capacity: number
-  image: string
+interface TastingType {
+  id: string;
+  name: string;
+  description: string;
+  duration: number; // v minútach
+  price: number;
+  capacity: number;
+  image: string;
+}
+
+interface ContactInfo {
+  name: string;
+  email: string;
+  phone: string;
+}
+
+interface TimeOption {
+  value: string;
+  label: string;
 }
 
 // Vzorové dáta degustácií
@@ -75,7 +85,7 @@ export default function DegustaciaPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [personCount, setPersonCount] = useState(2)
-  const [contactInfo, setContactInfo] = useState({
+  const [contactInfo, setContactInfo] = useState<ContactInfo>({
     name: '',
     email: '',
     phone: ''
@@ -84,7 +94,7 @@ export default function DegustaciaPage() {
   const router = useRouter()
   
   // Filtrovanie dostupných časov pre vybraný dátum
-  const availableTimes = selectedDate 
+  const availableTimes: TimeOption[] = selectedDate 
     ? availableDates
         .filter(date => 
           date.getDate() === selectedDate.getDate() && 
@@ -151,7 +161,7 @@ export default function DegustaciaPage() {
         }),
       });
       
-      const { url, sessionId, error } = await response.json();
+      const { url, error } = await response.json();
       
       if (error) {
         console.error('Error creating checkout session:', error);

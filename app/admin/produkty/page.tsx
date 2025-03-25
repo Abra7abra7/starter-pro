@@ -1,15 +1,14 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { 
-  Plus, 
   Search, 
-  Filter, 
+  Plus, 
   Edit, 
-  Trash2, 
+  Trash2,
+  Filter,
   ChevronDown,
   Wine,
-  Image as ImageIcon
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,14 +19,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -43,8 +34,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -52,15 +44,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { ImageUpload } from '@/components/ui/image-upload'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Image from 'next/image'
+import { ImageUpload } from '@/components/ui/image-upload'
+
+// Define types for the wine product
+interface WineProduct {
+  id: string
+  name: string
+  vintage: number
+  category: string
+  variety: string
+  price: number
+  stock: number
+  vineyard: string
+  status: 'active' | 'low_stock' | 'out_of_stock'
+  description?: string
+  image?: string
+  images?: { url: string; alt_text?: string; is_primary?: boolean }[]
+}
 
 // Mock data - would be replaced with real data from Supabase
-const mockWines = [
+const mockWines: WineProduct[] = [
   {
     id: '1',
     name: 'Cabernet Sauvignon',
@@ -133,14 +138,14 @@ export default function ProductsPage() {
   const [wines, setWines] = useState(mockWines)
   const [searchTerm, setSearchTerm] = useState('')
   const [openDialog, setOpenDialog] = useState(false)
-  const [selectedWine, setSelectedWine] = useState<any>(null)
+  const [selectedWine, setSelectedWine] = useState<WineProduct | null>(null)
   
   const filteredWines = wines.filter(wine => 
     wine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     wine.variety.toLowerCase().includes(searchTerm.toLowerCase())
   )
   
-  const handleEdit = (wine: any) => {
+  const handleEdit = (wine: WineProduct) => {
     setSelectedWine(wine)
     setOpenDialog(true)
   }
@@ -156,7 +161,7 @@ export default function ProductsPage() {
     setOpenDialog(true)
   }
   
-  const handleSave = (formData: any) => {
+  const handleSave = (formData: Partial<WineProduct>) => {
     if (selectedWine) {
       // Update existing wine
       setWines(wines.map(wine => 
@@ -167,8 +172,8 @@ export default function ProductsPage() {
       const newWine = {
         id: (wines.length + 1).toString(),
         ...formData,
-        status: formData.stock > 10 ? 'active' : formData.stock > 0 ? 'low_stock' : 'out_of_stock'
-      }
+        status: formData.stock && formData.stock > 10 ? 'active' : formData.stock && formData.stock > 0 ? 'low_stock' : 'out_of_stock'
+      } as WineProduct
       setWines([...wines, newWine])
     }
     setOpenDialog(false)
@@ -202,69 +207,82 @@ export default function ProductsPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-1">
-                  <Filter className="h-4 w-4" />
-                  Filter
-                  <ChevronDown className="h-4 w-4 ml-1" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[200px]">
-                <DropdownMenuLabel>Filtrovať podľa</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Všetky produkty</DropdownMenuItem>
-                <DropdownMenuItem>Červené vína</DropdownMenuItem>
-                <DropdownMenuItem>Biele vína</DropdownMenuItem>
-                <DropdownMenuItem>Nízky stav zásob</DropdownMenuItem>
-                <DropdownMenuItem>Vypredané</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex gap-2">
+              <Select defaultValue="all">
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Kategória" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Všetky kategórie</SelectItem>
+                  <SelectItem value="cervene">Červené vína</SelectItem>
+                  <SelectItem value="biele">Biele vína</SelectItem>
+                  <SelectItem value="ruzove">Ružové vína</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Button variant="outline" className="flex items-center gap-1">
+                <Filter className="h-4 w-4" />
+                Filtre
+                <ChevronDown className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
           </div>
           
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Produkt</TableHead>
+                  <TableHead className="w-[80px]">Foto</TableHead>
+                  <TableHead className="min-w-[150px]">Názov</TableHead>
+                  <TableHead>Ročník</TableHead>
                   <TableHead>Kategória</TableHead>
-                  <TableHead>Cena (€)</TableHead>
-                  <TableHead>Stav zásob</TableHead>
+                  <TableHead>Odroda</TableHead>
+                  <TableHead className="text-right">Cena</TableHead>
+                  <TableHead className="text-right">Skladom</TableHead>
+                  <TableHead className="text-right">Stav</TableHead>
                   <TableHead className="text-right">Akcie</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredWines.length > 0 ? (
+                {filteredWines.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="h-24 text-center">
+                      Nenašli sa žiadne produkty
+                    </TableCell>
+                  </TableRow>
+                ) : (
                   filteredWines.map((wine) => (
                     <TableRow key={wine.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <div className="h-10 w-10 rounded bg-amber-100 flex items-center justify-center">
-                            <Wine className="h-5 w-5 text-amber-700" />
-                          </div>
-                          <div>
-                            <div>{wine.name} {wine.vintage}</div>
-                            <div className="text-sm text-muted-foreground">{wine.variety}</div>
-                          </div>
+                      <TableCell>
+                        <div className="h-12 w-12 rounded-md bg-gray-100 flex items-center justify-center">
+                          {wine.image ? (
+                            <Image
+                              src={wine.image}
+                              alt={wine.name}
+                              width={48}
+                              height={48}
+                              className="rounded-md object-cover"
+                            />
+                          ) : (
+                            <Wine className="h-6 w-6 text-gray-400" />
+                          )}
                         </div>
                       </TableCell>
+                      <TableCell className="font-medium">{wine.name}</TableCell>
+                      <TableCell>{wine.vintage}</TableCell>
                       <TableCell>{wine.category}</TableCell>
-                      <TableCell>{wine.price.toFixed(2)}</TableCell>
-                      <TableCell>
+                      <TableCell>{wine.variety}</TableCell>
+                      <TableCell className="text-right">{wine.price.toFixed(2)} €</TableCell>
+                      <TableCell className="text-right">{wine.stock}</TableCell>
+                      <TableCell className="text-right">
                         {wine.status === 'active' && (
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                            Na sklade: {wine.stock}
-                          </Badge>
+                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Aktívny</Badge>
                         )}
                         {wine.status === 'low_stock' && (
-                          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                            Nízky stav: {wine.stock}
-                          </Badge>
+                          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Nízky stav</Badge>
                         )}
                         {wine.status === 'out_of_stock' && (
-                          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-                            Vypredané
-                          </Badge>
+                          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Vypredané</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -289,12 +307,6 @@ export default function ProductsPage() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
-                      Nenašli sa žiadne produkty
-                    </TableCell>
-                  </TableRow>
                 )}
               </TableBody>
             </Table>
@@ -320,10 +332,10 @@ function ProductDialog({
 }: { 
   open: boolean, 
   onOpenChange: (open: boolean) => void, 
-  wine: any | null,
-  onSave: (formData: any) => void
+  wine: WineProduct | null,
+  onSave: (formData: Partial<WineProduct>) => void
 }) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Partial<WineProduct>>({
     name: wine?.name || '',
     vintage: wine?.vintage || new Date().getFullYear(),
     category: wine?.category || 'Červené',
@@ -335,10 +347,22 @@ function ProductDialog({
     images: wine?.images || []
   })
   
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: keyof WineProduct, value: string | number) => {
     setFormData({
       ...formData,
       [field]: value
+    })
+  }
+  
+  const handleImageUpload = (url: string) => {
+    const newImages = formData.images ? [...formData.images] : []
+    newImages.push({
+      url,
+      is_primary: newImages.length === 0
+    })
+    setFormData({
+      ...formData,
+      images: newImages
     })
   }
   
@@ -346,51 +370,21 @@ function ProductDialog({
     e.preventDefault()
     onSave(formData)
   }
-
-  const handleImageUpload = (urls: string[]) => {
-    const newImages = urls.map((url, index) => ({
-      url,
-      alt_text: `${formData.name} ${index + 1}`,
-      is_primary: index === 0 && formData.images.length === 0
-    }))
-    
-    handleChange('images', [...formData.images, ...newImages])
-  }
-
-  const removeImage = (indexToRemove: number) => {
-    const updatedImages = formData.images.filter((_, index: number) => index !== indexToRemove)
-    
-    // If we removed the primary image, make the first remaining image primary
-    if (formData.images[indexToRemove].is_primary && updatedImages.length > 0) {
-      updatedImages[0].is_primary = true
-    }
-    
-    handleChange('images', updatedImages)
-  }
-
-  const setPrimaryImage = (indexToSetPrimary: number) => {
-    const updatedImages = formData.images.map((image: any, index: number) => ({
-      ...image,
-      is_primary: index === indexToSetPrimary
-    }))
-    
-    handleChange('images', updatedImages)
-  }
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{wine ? 'Upraviť produkt' : 'Pridať nový produkt'}</DialogTitle>
+          <DialogDescription>
+            {wine 
+              ? 'Upravte detaily existujúceho produktu' 
+              : 'Vyplňte informácie o novom produkte'
+            }
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>{wine ? 'Upraviť produkt' : 'Pridať nový produkt'}</DialogTitle>
-            <DialogDescription>
-              {wine 
-                ? 'Upravte detaily existujúceho produktu' 
-                : 'Vyplňte formulár pre pridanie nového produktu do katalógu'}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6 py-4">
+          <div className="grid gap-6 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Názov vína</Label>
@@ -401,7 +395,6 @@ function ProductDialog({
                   required
                 />
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="vintage">Ročník</Label>
                 <Input
@@ -417,8 +410,8 @@ function ProductDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="category">Kategória</Label>
-                <Select 
-                  value={formData.category} 
+                <Select
+                  value={formData.category}
                   onValueChange={(value) => handleChange('category', value)}
                 >
                   <SelectTrigger>
@@ -432,7 +425,6 @@ function ProductDialog({
                   </SelectContent>
                 </Select>
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="variety">Odroda</Label>
                 <Input
@@ -456,9 +448,8 @@ function ProductDialog({
                   required
                 />
               </div>
-              
               <div className="space-y-2">
-                <Label htmlFor="stock">Stav zásob</Label>
+                <Label htmlFor="stock">Skladom (ks)</Label>
                 <Input
                   id="stock"
                   type="number"
@@ -470,77 +461,64 @@ function ProductDialog({
             </div>
             
             <div className="space-y-2">
+              <Label htmlFor="vineyard">Vinárstvo</Label>
+              <Input
+                id="vineyard"
+                value={formData.vineyard}
+                onChange={(e) => handleChange('vineyard', e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
               <Label htmlFor="description">Popis</Label>
               <Textarea
                 id="description"
-                value={formData.description}
+                value={formData.description || ''}
                 onChange={(e) => handleChange('description', e.target.value)}
                 rows={4}
               />
             </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <ImageIcon className="mr-2 h-5 w-5" />
-                <h3 className="text-lg font-medium">Obrázky produktu</h3>
-              </div>
-              
-              {formData.images.length > 0 && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {formData.images.map((image: any, index: number) => (
-                      <div key={index} className="relative group">
-                        <div className="aspect-square relative rounded-md overflow-hidden border border-gray-200">
-                          <Image 
-                            src={image.url} 
-                            alt={image.alt_text || `Obrázok ${index + 1}`}
-                            fill
-                            className="object-cover"
-                          />
-                          {image.is_primary && (
-                            <div className="absolute top-2 left-2 bg-amber-500 text-white text-xs px-2 py-1 rounded-full">
-                              Hlavný
-                            </div>
-                          )}
-                        </div>
-                        <div className="absolute -top-2 -right-2 flex space-x-1">
-                          {!image.is_primary && (
-                            <button
-                              type="button"
-                              onClick={() => setPrimaryImage(index)}
-                              className="bg-amber-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                              title="Nastaviť ako hlavný"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                              </svg>
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Odstrániť obrázok"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+            
+            <div className="space-y-2">
+              <Label>Fotografie</Label>
+              <div className="grid grid-cols-4 gap-4">
+                {formData.images && formData.images.map((image, index) => (
+                  <div key={index} className="relative aspect-square rounded-md overflow-hidden">
+                    <Image 
+                      src={image.url} 
+                      alt={`Product image ${index + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6 rounded-full"
+                      onClick={() => {
+                        const newImages = [...(Array.isArray(formData.images) ? formData.images : [])]
+                        newImages.splice(index, 1)
+                        setFormData({
+                          ...formData,
+                          images: newImages
+                        })
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
-                </div>
-              )}
-              
-              <ImageUpload 
-                onUploadComplete={handleImageUpload}
-                maxFiles={5}
-                bucket="wine-images"
-                folder="products"
-              />
+                ))}
+                <ImageUpload
+                  onUploadComplete={(urls) => handleImageUpload(urls[0])}
+                  maxFiles={1}
+                  bucket="images"
+                  folder="products"
+                />
+              </div>
             </div>
           </div>
-          
-          <DialogFooter className="mt-6">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Zrušiť
             </Button>

@@ -55,7 +55,6 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ImageUpload } from '@/components/ui/image-upload'
-import Image from 'next/image'
 
 // Define TypeScript interfaces for our data
 interface Wine {
@@ -94,28 +93,6 @@ interface Registration {
   status: string;
   paymentStatus: string;
   totalPrice: number;
-}
-
-// Define interfaces for form data
-interface ImageData {
-  url: string;
-  alt_text: string;
-  is_primary: boolean;
-}
-
-interface EventFormData {
-  title: string;
-  eventType: string;
-  description: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  maxAttendees: number;
-  price: number;
-  status: string;
-  isPrivate: boolean;
-  imageUrl: string;
-  images: ImageData[];
 }
 
 // Mock data for events
@@ -266,8 +243,8 @@ export default function EventsPage() {
     } else {
       // Add new event
       const newEvent: Event = {
-        id: (events.length + 1).toString(),
         ...formData,
+        id: (events.length + 1).toString(),
         currentAttendees: 0,
         status: 'scheduled',
         wines: []
@@ -555,10 +532,10 @@ function EventDialog({
     maxAttendees: event?.maxAttendees || 30,
     price: event?.price || 25.00,
     isPrivate: event?.isPrivate || false,
-    images: event?.images || []
+    imageUrl: event?.imageUrl || ''
   })
   
-  const handleChange = (field: keyof typeof formData, value: string | number | boolean | Array<{url: string, alt_text: string, is_primary: boolean}>) => {
+  const handleChange = (field: keyof typeof formData, value: string | number | boolean) => {
     setFormData({
       ...formData,
       [field]: value
@@ -579,22 +556,6 @@ function EventDialog({
     }
   }
 
-  const removeImage = (indexToRemove: number) => {
-    setFormData({
-      ...formData,
-      images: formData.images.filter((_, index: number) => index !== indexToRemove)
-    })
-  }
-
-  const setPrimaryImage = (indexToSetPrimary: number) => {
-    const updatedImages = formData.images.map((image, index) => ({
-      ...image,
-      is_primary: index === indexToSetPrimary
-    }))
-    
-    handleChange('images', updatedImages)
-  }
-  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
@@ -727,55 +688,9 @@ function EventDialog({
                 <h3 className="text-lg font-medium">Obrázky udalosti</h3>
               </div>
               
-              {formData.images.length > 0 && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {formData.images.map((image, index) => (
-                      <div key={index} className="relative group">
-                        <div className="aspect-square relative rounded-md overflow-hidden border border-gray-200">
-                          <Image 
-                            src={image.url} 
-                            alt={image.alt_text || `Obrázok ${index + 1}`}
-                            fill
-                            className="object-cover"
-                          />
-                          {image.is_primary && (
-                            <div className="absolute top-2 left-2 bg-amber-500 text-white text-xs px-2 py-1 rounded-full">
-                              Hlavný
-                            </div>
-                          )}
-                        </div>
-                        <div className="absolute -top-2 -right-2 flex space-x-1">
-                          {!image.is_primary && (
-                            <button
-                              type="button"
-                              onClick={() => setPrimaryImage(index)}
-                              className="bg-amber-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                              title="Nastaviť ako hlavný"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                              </svg>
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => removeImage(index)}
-                            className="bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Odstrániť obrázok"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
               <ImageUpload 
                 onUploadComplete={handleImageUpload}
-                maxFiles={5}
+                maxFiles={1}
                 bucket="tasting-images"
                 folder="events"
               />

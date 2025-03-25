@@ -3,8 +3,6 @@
 import { useState } from 'react'
 import { 
   Search, 
-  Filter, 
-  ChevronDown, 
   Eye, 
   Download,
   Package,
@@ -24,14 +22,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Table,
   TableBody,
   TableCell,
@@ -45,7 +35,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   Tabs,
@@ -63,8 +52,36 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 
-// Mock data - would be replaced with real data from Supabase
-const mockOrders = [
+// Define TypeScript interfaces for our data
+interface Order {
+  id: string;
+  orderNumber: string;
+  date: string;
+  customer: string;
+  email: string;
+  total: number;
+  status: string;
+  paymentStatus: string;
+  items: OrderItem[];
+  shippingAddress: {
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+  shippingMethod: string;
+  trackingNumber: string | null;
+}
+
+interface OrderItem {
+  id: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+// Mock data for orders
+const mockOrders: Order[] = [
   {
     id: '1',
     orderNumber: 'ORD-20250325-1001',
@@ -177,10 +194,10 @@ const mockOrders = [
 ]
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState(mockOrders)
+  const [orders, setOrders] = useState<Order[]>(mockOrders)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [selectedOrder, setSelectedOrder] = useState<any>(null)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [openDialog, setOpenDialog] = useState(false)
   
   const filteredOrders = orders.filter(order => {
@@ -196,7 +213,7 @@ export default function OrdersPage() {
     return matchesSearch && matchesStatus
   })
   
-  const handleViewOrder = (order: any) => {
+  const handleViewOrder = (order: Order) => {
     setSelectedOrder(order)
     setOpenDialog(true)
   }
@@ -491,7 +508,7 @@ export default function OrdersPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {selectedOrder.items.map((item: any) => (
+                      {selectedOrder.items.map((item: OrderItem) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">
                             {item.name}

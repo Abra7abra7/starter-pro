@@ -5,9 +5,17 @@ import Stripe from 'stripe';
 import type { Database, Tables, TablesInsert } from '@/types/database.types';
 
 export function createAdminClient() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+        console.error('Missing Supabase environment variables');
+        throw new Error('Missing Supabase credentials: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+    }
+
     const supabase = createClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
+        supabaseUrl,
+        supabaseServiceRoleKey
     )
 
     return supabase
@@ -212,7 +220,7 @@ const copyBillingDetailsToCustomer = async (
     const customer = payment_method.customer as string;
     const { name, phone, address } = payment_method.billing_details;
     if (!name || !phone || !address) return;
-    //@ts-ignore
+    //@ts-expect-error - Stripe types mismatch with customer update parameters
     await stripe.customers.update(customer, { name, phone, address });
 };
 
@@ -244,7 +252,6 @@ const manageSubscriptionStatusChange = async (
         status: subscription.status,
         price_id: subscription.items.data[0].price.id,
         //TODO check quantity on subscription
-        // @ts-ignore
         quantity: subscription.quantity,
         cancel_at_period_end: subscription.cancel_at_period_end,
         cancel_at: subscription.cancel_at
@@ -283,7 +290,6 @@ const manageSubscriptionStatusChange = async (
     // For a new subscription copy the billing details to the customer object.
     // NOTE: This is a costly operation and should happen at the very end.
     if (createAction && subscription.default_payment_method && uuid)
-        //@ts-ignore
         await copyBillingDetailsToCustomer(
             uuid,
             subscription.default_payment_method as Stripe.PaymentMethod

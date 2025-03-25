@@ -3,7 +3,6 @@
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { CheckCircle } from 'lucide-react'
-import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useCart } from '@/hooks/use-cart'
 

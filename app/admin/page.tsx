@@ -8,8 +8,7 @@ import {
   Calendar, 
   Package, 
   AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight
+  ArrowUpRight
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -21,8 +20,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell
@@ -262,7 +259,7 @@ export default function AdminDashboard() {
                 <div>
                   <p className="font-medium">Nadchádzajúca degustácia</p>
                   <p className="text-sm text-muted-foreground">
-                    "Jarná degustácia" - 15. apríla 2025, 18:00
+                    &quot;Jarná degustácia&quot; - 15. apríla 2025, 18:00
                   </p>
                 </div>
               </div>

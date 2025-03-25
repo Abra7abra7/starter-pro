@@ -3,12 +3,7 @@
 import { useState } from 'react'
 import { 
   Search, 
-  Filter, 
-  ChevronDown, 
   Plus, 
-  Edit, 
-  Trash2,
-  AlertTriangle,
   ArrowUpRight,
   ArrowDownRight,
   Package,
@@ -22,16 +17,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from '@/components/ui/card'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -47,7 +33,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   Tabs,
@@ -66,8 +51,41 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 
+// Define interfaces for inventory items
+interface InventoryItem {
+  id: string;
+  productId: string;
+  productName: string;
+  category: string;
+  quantity: number;
+  minStockLevel: number;
+  maxStockLevel: number;
+  warehouseId: string;
+  warehouseName: string;
+  batchNumber: string;
+  expirationDate: string;
+  lastStockCheck: string;
+}
+
+interface Warehouse {
+  id: string;
+  name: string;
+  location: string;
+}
+
+interface Transaction {
+  id: string;
+  inventoryId: string;
+  productName: string;
+  transactionType: string;
+  quantity: number;
+  date: string;
+  performedBy: string;
+  notes: string;
+}
+
 // Mock data - would be replaced with real data from Supabase
-const mockInventory = [
+const mockInventory: InventoryItem[] = [
   {
     id: '1',
     productId: '1',
@@ -154,13 +172,13 @@ const mockInventory = [
   },
 ]
 
-const mockWarehouses = [
+const mockWarehouses: Warehouse[] = [
   { id: '1', name: 'Hlavný sklad', location: 'Bratislava' },
   { id: '2', name: 'Sklad Košice', location: 'Košice' },
   { id: '3', name: 'Predajňa Bratislava', location: 'Bratislava' }
 ]
 
-const mockTransactions = [
+const mockTransactions: Transaction[] = [
   {
     id: '1',
     inventoryId: '1',
@@ -214,12 +232,12 @@ const mockTransactions = [
 ]
 
 export default function InventoryPage() {
-  const [inventory, setInventory] = useState(mockInventory)
+  const [inventory, setInventory] = useState<InventoryItem[]>(mockInventory)
   const [searchTerm, setSearchTerm] = useState('')
   const [warehouseFilter, setWarehouseFilter] = useState('all')
   const [stockFilter, setStockFilter] = useState('all')
   const [openDialog, setOpenDialog] = useState(false)
-  const [selectedItem, setSelectedItem] = useState<any>(null)
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null)
   const [activeTab, setActiveTab] = useState('inventory')
   
   const filteredInventory = inventory.filter(item => {
@@ -240,7 +258,7 @@ export default function InventoryPage() {
     return matchesSearch && matchesWarehouse && matchesStock
   })
   
-  const handleAdjustStock = (item: any) => {
+  const handleAdjustStock = (item: InventoryItem) => {
     setSelectedItem(item)
     setOpenDialog(true)
   }
@@ -252,7 +270,7 @@ export default function InventoryPage() {
     setOpenDialog(false)
   }
   
-  const getStockStatus = (item: any) => {
+  const getStockStatus = (item: InventoryItem) => {
     if (item.quantity === 0) {
       return (
         <Badge className="bg-red-100 text-red-800 hover:bg-red-100">

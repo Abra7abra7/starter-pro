@@ -1,19 +1,18 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, Calendar, MapPin, Users, ArrowLeft, Home } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
-import { stripe } from '@/utils/stripe/config'
 
 export default function TastingSuccessPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const sessionId = searchParams.get('session_id')
-  const [reservationDetails, setReservationDetails] = useState<any>(null)
+  const [reservationDetails, setReservationDetails] = useState<Record<string, string> | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -109,7 +108,7 @@ export default function TastingSuccessPage() {
                 
                 <div>
                   <h3 className="font-medium text-amber-900">Celková suma</h3>
-                  <p className="font-bold text-amber-800">{(reservationDetails.amount / 100).toFixed(2)} €</p>
+                  <p className="font-bold text-amber-800">{(Number(reservationDetails.amount) / 100).toFixed(2)} €</p>
                 </div>
                 
                 <div>

@@ -6,8 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Trash2, MinusCircle, PlusCircle, ArrowLeft, ShoppingBag, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useCart } from '@/hooks/use-cart'
-import { Input } from '@/components/ui/input'
+import { useCart, CartItem } from '@/hooks/use-cart'
 import { getStripe } from '@/utils/stripe/client'
 import { useRouter } from 'next/navigation'
 
@@ -82,7 +81,7 @@ export default function KosikPage() {
           <Card>
             <CardContent className="p-6">
               <div className="space-y-6">
-                {items.map(item => (
+                {items.map((item: CartItem) => (
                   <div key={item.product.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-6 border-b last:border-0 last:pb-0">
                     <div className="relative h-24 w-16 bg-amber-50 flex-shrink-0">
                       <Image 
