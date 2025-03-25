@@ -6,14 +6,12 @@ import {
   Plus, 
   Calendar, 
   Users, 
-  Wine,
   MapPin,
-  Clock,
   Edit,
   Trash2,
   CheckCircle,
   XCircle,
-  Image as ImageIcon
+  ImageIcon
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -56,12 +54,72 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Separator } from '@/components/ui/separator'
 import { ImageUpload } from '@/components/ui/image-upload'
 import Image from 'next/image'
 
+// Define TypeScript interfaces for our data
+interface Wine {
+  id: string;
+  name: string;
+  tastingOrder: number;
+}
+
+interface Event {
+  id: string;
+  title: string;
+  eventType: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  maxAttendees: number;
+  currentAttendees: number;
+  price: number;
+  status: 'scheduled' | 'completed' | 'cancelled';
+  isPrivate: boolean;
+  imageUrl: string;
+  wines: Wine[];
+}
+
+interface Registration {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  customerId: string;
+  customerName: string;
+  email: string;
+  phone: string;
+  registrationDate: string;
+  numberOfGuests: number;
+  status: string;
+  paymentStatus: string;
+  totalPrice: number;
+}
+
+// Define interfaces for form data
+interface ImageData {
+  url: string;
+  alt_text: string;
+  is_primary: boolean;
+}
+
+interface EventFormData {
+  title: string;
+  eventType: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  maxAttendees: number;
+  price: number;
+  status: string;
+  isPrivate: boolean;
+  imageUrl: string;
+  images: ImageData[];
+}
+
 // Mock data for events
-const mockEvents = [
+const mockEvents: Event[] = [
   {
     id: '1',
     title: 'Jarná degustácia',
@@ -144,7 +202,7 @@ const mockEvents = [
 ]
 
 // Mock data for registrations
-const mockRegistrations = [
+const mockRegistrations: Registration[] = [
   {
     id: '1',
     eventId: '1',
@@ -158,58 +216,16 @@ const mockRegistrations = [
     status: 'registered',
     paymentStatus: 'paid',
     totalPrice: 50.00
-  },
-  {
-    id: '2',
-    eventId: '1',
-    eventTitle: 'Jarná degustácia',
-    customerId: '2',
-    customerName: 'Eva Kováčová',
-    email: 'eva.kovacova@example.com',
-    phone: '+421 900 234 567',
-    registrationDate: '2025-03-16T14:45:00Z',
-    numberOfGuests: 1,
-    status: 'registered',
-    paymentStatus: 'paid',
-    totalPrice: 25.00
-  },
-  {
-    id: '3',
-    eventId: '2',
-    eventTitle: 'Víkendový workshop výroby vína',
-    customerId: '3',
-    customerName: 'Peter Horváth',
-    email: 'peter.horvath@example.com',
-    phone: '+421 900 345 678',
-    registrationDate: '2025-03-18T09:15:00Z',
-    numberOfGuests: 2,
-    status: 'registered',
-    paymentStatus: 'pending',
-    totalPrice: 240.00
-  },
-  {
-    id: '4',
-    eventId: '3',
-    eventTitle: 'Privátna degustácia pre firmu XYZ',
-    customerId: '4',
-    customerName: 'Firma XYZ',
-    email: 'kontakt@xyz.sk',
-    phone: '+421 900 456 789',
-    registrationDate: '2025-03-10T11:20:00Z',
-    numberOfGuests: 20,
-    status: 'registered',
-    paymentStatus: 'paid',
-    totalPrice: 700.00
   }
 ]
 
 export default function EventsPage() {
-  const [events, setEvents] = useState(mockEvents)
-  const [registrations, setRegistrations] = useState(mockRegistrations)
+  const [events, setEvents] = useState<Event[]>(mockEvents)
+  const [registrations] = useState<Registration[]>(mockRegistrations)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [openDialog, setOpenDialog] = useState(false)
-  const [selectedEvent, setSelectedEvent] = useState<any>(null)
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [activeTab, setActiveTab] = useState('events')
   
   const filteredEvents = events.filter(event => {
@@ -230,7 +246,7 @@ export default function EventsPage() {
     setOpenDialog(true)
   }
   
-  const handleEditEvent = (event: any) => {
+  const handleEditEvent = (event: Event) => {
     setSelectedEvent(event)
     setOpenDialog(true)
   }
@@ -241,7 +257,7 @@ export default function EventsPage() {
     }
   }
   
-  const handleSaveEvent = (formData: any) => {
+  const handleSaveEvent = (formData: Event) => {
     if (selectedEvent) {
       // Update existing event
       setEvents(events.map(event => 
@@ -249,7 +265,7 @@ export default function EventsPage() {
       ))
     } else {
       // Add new event
-      const newEvent = {
+      const newEvent: Event = {
         id: (events.length + 1).toString(),
         ...formData,
         currentAttendees: 0,
@@ -526,8 +542,8 @@ function EventDialog({
 }: { 
   open: boolean, 
   onOpenChange: (open: boolean) => void, 
-  event: any | null,
-  onSave: (formData: any) => void
+  event: Event | null,
+  onSave: (formData: Event) => void
 }) {
   const [formData, setFormData] = useState({
     title: event?.title || '',
@@ -542,7 +558,7 @@ function EventDialog({
     images: event?.images || []
   })
   
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: keyof typeof formData, value: string | number | boolean | Array<{url: string, alt_text: string, is_primary: boolean}>) => {
     setFormData({
       ...formData,
       [field]: value
@@ -551,32 +567,27 @@ function EventDialog({
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData)
+    onSave(formData as Event)
   }
 
   const handleImageUpload = (urls: string[]) => {
-    const newImages = urls.map((url, index) => ({
-      url,
-      alt_text: `${formData.title} ${index + 1}`,
-      is_primary: index === 0 && formData.images.length === 0
-    }))
-    
-    handleChange('images', [...formData.images, ...newImages])
+    if (urls.length > 0) {
+      setFormData({
+        ...formData,
+        imageUrl: urls[0]
+      })
+    }
   }
 
   const removeImage = (indexToRemove: number) => {
-    const updatedImages = formData.images.filter((_, index: number) => index !== indexToRemove)
-    
-    // If we removed the primary image, make the first remaining image primary
-    if (formData.images[indexToRemove].is_primary && updatedImages.length > 0) {
-      updatedImages[0].is_primary = true
-    }
-    
-    handleChange('images', updatedImages)
+    setFormData({
+      ...formData,
+      images: formData.images.filter((_, index: number) => index !== indexToRemove)
+    })
   }
 
   const setPrimaryImage = (indexToSetPrimary: number) => {
-    const updatedImages = formData.images.map((image: any, index: number) => ({
+    const updatedImages = formData.images.map((image, index) => ({
       ...image,
       is_primary: index === indexToSetPrimary
     }))
@@ -719,7 +730,7 @@ function EventDialog({
               {formData.images.length > 0 && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {formData.images.map((image: any, index: number) => (
+                    {formData.images.map((image, index) => (
                       <div key={index} className="relative group">
                         <div className="aspect-square relative rounded-md overflow-hidden border border-gray-200">
                           <Image 
