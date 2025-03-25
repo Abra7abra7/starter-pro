@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, Calendar, MapPin, Users, ArrowLeft, Home } from 'lucide-react'
@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useRouter } from 'next/navigation'
 
-export default function TastingSuccessPage() {
+function TastingSuccessContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const sessionId = searchParams.get('session_id')
@@ -137,5 +137,18 @@ export default function TastingSuccessPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function TastingSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto py-16 flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-700"></div>
+        <p className="mt-4 text-amber-800">Načítavame...</p>
+      </div>
+    }>
+      <TastingSuccessContent />
+    </Suspense>
   )
 }

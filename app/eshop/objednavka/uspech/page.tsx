@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { CheckCircle } from 'lucide-react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useCart } from '@/hooks/use-cart'
 
-export default function OrderSuccessPage() {
+function OrderSuccessContent() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session_id')
   const { clearCart } = useCart()
@@ -75,5 +75,18 @@ export default function OrderSuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto py-16 flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-700"></div>
+        <p className="mt-4 text-amber-800">Načítavame...</p>
+      </div>
+    }>
+      <OrderSuccessContent />
+    </Suspense>
   )
 }
