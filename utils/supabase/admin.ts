@@ -252,7 +252,7 @@ const manageSubscriptionStatusChange = async (
         status: subscription.status,
         price_id: subscription.items.data[0].price.id,
         //TODO check quantity on subscription
-        quantity: subscription.quantity,
+        quantity: subscription.items.data[0].quantity,
         cancel_at_period_end: subscription.cancel_at_period_end,
         cancel_at: subscription.cancel_at
             ? toDateTime(subscription.cancel_at).toISOString()
