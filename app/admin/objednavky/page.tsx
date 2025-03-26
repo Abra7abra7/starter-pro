@@ -1,26 +1,10 @@
 "use client"
 
-import { useState } from 'react'
-import { 
-  Search, 
-  Eye, 
-  Download,
-  Package,
-  CreditCard,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Truck
-} from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Eye, Package, CheckCircle2, XCircle } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -37,546 +21,351 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
+} from "@/components/ui/select"
+import { createClient } from '@/utils/supabase/client'
 
-// Define TypeScript interfaces for our data
-interface Order {
-  id: string;
-  orderNumber: string;
-  date: string;
-  customer: string;
-  email: string;
-  total: number;
-  status: string;
-  paymentStatus: string;
-  items: OrderItem[];
-  shippingAddress: {
-    street: string;
-    city: string;
-    postalCode: string;
-    country: string;
-  };
-  shippingMethod: string;
-  trackingNumber: string | null;
-}
+// Initialize Supabase client
+const supabase = createClient()
 
 interface OrderItem {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
+  id: string
+  product: {
+    name: string
+    price: string
+  }
+  quantity: number
 }
 
-// Mock data for orders
-const mockOrders: Order[] = [
-  {
-    id: '1',
-    orderNumber: 'ORD-20250325-1001',
-    customer: 'Ján Novák',
-    email: 'jan.novak@example.com',
-    date: '2025-03-25T08:30:00Z',
-    total: 89.97,
-    status: 'pending',
-    paymentStatus: 'paid',
-    items: [
-      { id: '1', name: 'Cabernet Sauvignon 2022', quantity: 3, price: 15.99 },
-      { id: '2', name: 'Chardonnay 2023', quantity: 2, price: 12.99 }
-    ],
-    shippingAddress: {
-      street: 'Hlavná 123',
-      city: 'Bratislava',
-      postalCode: '81101',
-      country: 'Slovensko'
-    },
-    shippingMethod: 'Kuriér',
-    trackingNumber: null
-  },
-  {
-    id: '2',
-    orderNumber: 'ORD-20250324-1002',
-    customer: 'Eva Kováčová',
-    email: 'eva.kovacova@example.com',
-    date: '2025-03-24T14:45:00Z',
-    total: 72.50,
-    status: 'processing',
-    paymentStatus: 'paid',
-    items: [
-      { id: '3', name: 'Frankovka Modrá 2021', quantity: 2, price: 14.50 },
-      { id: '4', name: 'Rizling Rýnsky 2022', quantity: 3, price: 13.99 }
-    ],
-    shippingAddress: {
-      street: 'Nová 45',
-      city: 'Košice',
-      postalCode: '04001',
-      country: 'Slovensko'
-    },
-    shippingMethod: 'Kuriér',
-    trackingNumber: null
-  },
-  {
-    id: '3',
-    orderNumber: 'ORD-20250323-1003',
-    customer: 'Peter Horváth',
-    email: 'peter.horvath@example.com',
-    date: '2025-03-23T10:15:00Z',
-    total: 115.50,
-    status: 'shipped',
-    paymentStatus: 'paid',
-    items: [
-      { id: '1', name: 'Cabernet Sauvignon 2022', quantity: 2, price: 15.99 },
-      { id: '5', name: 'Svätovavrinecké 2020', quantity: 3, price: 16.50 },
-      { id: '4', name: 'Rizling Rýnsky 2022', quantity: 2, price: 13.99 }
-    ],
-    shippingAddress: {
-      street: 'Slnečná 78',
-      city: 'Žilina',
-      postalCode: '01001',
-      country: 'Slovensko'
-    },
-    shippingMethod: 'Kuriér',
-    trackingNumber: 'SK123456789'
-  },
-  {
-    id: '4',
-    orderNumber: 'ORD-20250322-1004',
-    customer: 'Mária Tóthová',
-    email: 'maria.tothova@example.com',
-    date: '2025-03-22T16:20:00Z',
-    total: 94.95,
-    status: 'delivered',
-    paymentStatus: 'paid',
-    items: [
-      { id: '6', name: 'Tramín Červený 2023', quantity: 5, price: 18.99 }
-    ],
-    shippingAddress: {
-      street: 'Krátka 15',
-      city: 'Nitra',
-      postalCode: '94901',
-      country: 'Slovensko'
-    },
-    shippingMethod: 'Kuriér',
-    trackingNumber: 'SK987654321'
-  },
-  {
-    id: '5',
-    orderNumber: 'ORD-20250321-1005',
-    customer: 'Tomáš Varga',
-    email: 'tomas.varga@example.com',
-    date: '2025-03-21T09:10:00Z',
-    total: 43.50,
-    status: 'cancelled',
-    paymentStatus: 'refunded',
-    items: [
-      { id: '3', name: 'Frankovka Modrá 2021', quantity: 3, price: 14.50 }
-    ],
-    shippingAddress: {
-      street: 'Dlhá 234',
-      city: 'Prešov',
-      postalCode: '08001',
-      country: 'Slovensko'
-    },
-    shippingMethod: 'Kuriér',
-    trackingNumber: null
+interface Order {
+  id: string
+  created_at: string
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  total_amount: number
+  customer: {
+    name: string
+    email: string
+    phone: string
+    address: string
   }
-]
+  items: OrderItem[]
+}
+
+const ORDER_STATUSES = {
+  pending: { label: 'Čaká na spracovanie', color: 'bg-yellow-100 text-yellow-800' },
+  processing: { label: 'Spracováva sa', color: 'bg-blue-100 text-blue-800' },
+  shipped: { label: 'Odoslané', color: 'bg-purple-100 text-purple-800' },
+  delivered: { label: 'Doručené', color: 'bg-green-100 text-green-800' },
+  cancelled: { label: 'Zrušené', color: 'bg-red-100 text-red-800' }
+}
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>(mockOrders)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-  const [openDialog, setOpenDialog] = useState(false)
-  
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = 
-      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.email.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = 
-      statusFilter === 'all' || 
-      order.status === statusFilter
-    
-    return matchesSearch && matchesStatus
-  })
-  
-  const handleViewOrder = (order: Order) => {
-    setSelectedOrder(order)
-    setOpenDialog(true)
-  }
-  
-  const handleUpdateStatus = (orderId: string, newStatus: string) => {
-    setOrders(orders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ))
-    
-    if (selectedOrder && selectedOrder.id === orderId) {
-      setSelectedOrder({ ...selectedOrder, status: newStatus })
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+
+  // Subscribe to real-time changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('orders_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        () => {
+          fetchOrders() // Refresh data when changes occur
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchOrders()
+  }, [])
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true)
+      const { data: orders, error: supabaseError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          customer:customers(*),
+          items:order_items(
+            id,
+            quantity,
+            product:products(
+              name,
+              price
+            )
+          )
+        `)
+        .order('created_at', { ascending: false })
+
+      if (supabaseError) throw supabaseError
+
+      setOrders(orders)
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while fetching orders')
+    } finally {
+      setLoading(false)
     }
   }
-  
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <Clock className="h-3 w-3 mr-1" />
-            Čaká na spracovanie
-          </Badge>
-        )
-      case 'processing':
-        return (
-          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-            <Package className="h-3 w-3 mr-1" />
-            Spracováva sa
-          </Badge>
-        )
-      case 'shipped':
-        return (
-          <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
-            <Truck className="h-3 w-3 mr-1" />
-            Odoslané
-          </Badge>
-        )
-      case 'delivered':
-        return (
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Doručené
-          </Badge>
-        )
-      case 'cancelled':
-        return (
-          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-            <XCircle className="h-3 w-3 mr-1" />
-            Zrušené
-          </Badge>
-        )
-      default:
-        return (
-          <Badge>
-            {status}
-          </Badge>
-        )
+
+  const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: newStatus })
+        .eq('id', orderId)
+
+      if (error) throw error
+
+      // Update local state
+      setOrders(orders.map(order => 
+        order.id === orderId 
+          ? { ...order, status: newStatus }
+          : order
+      ))
+    } catch (error) {
+      console.error('Error updating order status:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while updating order status')
     }
   }
-  
-  const getPaymentStatusBadge = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return (
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-            <CreditCard className="h-3 w-3 mr-1" />
-            Zaplatené
-          </Badge>
-        )
-      case 'pending':
-        return (
-          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-            <Clock className="h-3 w-3 mr-1" />
-            Čaká na platbu
-          </Badge>
-        )
-      case 'failed':
-        return (
-          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-            <XCircle className="h-3 w-3 mr-1" />
-            Zlyhané
-          </Badge>
-        )
-      case 'refunded':
-        return (
-          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <CreditCard className="h-3 w-3 mr-1" />
-            Vrátené
-          </Badge>
-        )
-      default:
-        return (
-          <Badge>
-            {status}
-          </Badge>
-        )
-    }
+
+  const filteredOrders = orders.filter(order =>
+    order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    order.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    order.customer.email.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-[80vh]">Načítavam...</div>
   }
-  
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('sk-SK', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date)
+
+  if (error) {
+    return (
+      <div className="p-4 text-red-500">
+        <h2 className="text-lg font-bold">Error:</h2>
+        <p>{error}</p>
+        <Button onClick={fetchOrders} className="mt-4">Retry</Button>
+      </div>
+    )
   }
-  
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Objednávky</h1>
-        <Button variant="outline" className="flex items-center gap-1">
-          <Download className="h-4 w-4" />
-          Exportovať
-        </Button>
       </div>
-      
+
       <Card>
         <CardHeader>
-          <CardTitle>Správa objednávok</CardTitle>
+          <CardTitle>Zoznam objednávok</CardTitle>
           <CardDescription>
-            Zobrazte a spravujte všetky objednávky z e-shopu
+            Správa všetkých objednávok v systéme
           </CardDescription>
+          <div className="flex items-center space-x-2">
+            <Search className="w-4 h-4 text-gray-500" />
+            <Input
+              placeholder="Hľadať podľa čísla objednávky, mena alebo emailu..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Vyhľadať objednávku, zákazníka..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Select
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Stav objednávky" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Všetky stavy</SelectItem>
-                <SelectItem value="pending">Čaká na spracovanie</SelectItem>
-                <SelectItem value="processing">Spracováva sa</SelectItem>
-                <SelectItem value="shipped">Odoslané</SelectItem>
-                <SelectItem value="delivered">Doručené</SelectItem>
-                <SelectItem value="cancelled">Zrušené</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Číslo objednávky</TableHead>
-                  <TableHead>Zákazník</TableHead>
-                  <TableHead>Dátum</TableHead>
-                  <TableHead>Celkom (€)</TableHead>
-                  <TableHead>Stav</TableHead>
-                  <TableHead>Platba</TableHead>
-                  <TableHead className="text-right">Akcie</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Číslo objednávky</TableHead>
+                <TableHead>Dátum</TableHead>
+                <TableHead>Zákazník</TableHead>
+                <TableHead>Suma</TableHead>
+                <TableHead>Stav</TableHead>
+                <TableHead>Akcie</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredOrders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-medium">{order.id}</TableCell>
+                  <TableCell>
+                    {new Date(order.created_at).toLocaleDateString('sk-SK', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{order.customer.name}</p>
+                      <p className="text-sm text-muted-foreground">{order.customer.email}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>€{order.total_amount.toLocaleString('sk-SK', { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell>
+                    <Select
+                      value={order.status}
+                      onValueChange={(value: Order['status']) => handleStatusChange(order.id, value)}
+                    >
+                      <SelectTrigger className={`w-[180px] ${ORDER_STATUSES[order.status].color}`}>
+                        <SelectValue>{ORDER_STATUSES[order.status].label}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(ORDER_STATUSES).map(([value, { label }]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedOrder(order)
+                        setIsDetailsDialogOpen(true)
+                      }}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.length > 0 ? (
-                  filteredOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">
-                        {order.orderNumber}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div>{order.customer}</div>
-                          <div className="text-sm text-muted-foreground">{order.email}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{formatDate(order.date)}</TableCell>
-                      <TableCell>{order.total.toFixed(2)}</TableCell>
-                      <TableCell>{getStatusBadge(order.status)}</TableCell>
-                      <TableCell>{getPaymentStatusBadge(order.paymentStatus)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewOrder(order)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Detail
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
-                      Nenašli sa žiadne objednávky
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
-      
-      {selectedOrder && (
-        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-          <DialogContent className="sm:max-w-[800px]">
-            <DialogHeader>
-              <DialogTitle>Detail objednávky {selectedOrder.orderNumber}</DialogTitle>
-              <DialogDescription>
-                Vytvorená {formatDate(selectedOrder.date)}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <Tabs defaultValue="details">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="details">Detaily</TabsTrigger>
-                <TabsTrigger value="products">Produkty</TabsTrigger>
-                <TabsTrigger value="shipping">Doprava</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="details" className="space-y-4 pt-4">
-                <div className="flex justify-between items-start">
+
+      {/* Order Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Detail objednávky {selectedOrder?.id}</DialogTitle>
+            <DialogDescription>
+              Kompletné informácie o objednávke
+            </DialogDescription>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="grid gap-6">
+              {/* Customer Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Informácie o zákazníkovi</h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h3 className="font-semibold text-lg">Stav objednávky</h3>
-                    <div className="mt-2">
-                      {getStatusBadge(selectedOrder.status)}
-                    </div>
+                    <p className="text-sm text-muted-foreground">Meno</p>
+                    <p className="font-medium">{selectedOrder.customer.name}</p>
                   </div>
-                  
-                  <Select
-                    value={selectedOrder.status}
-                    onValueChange={(value) => handleUpdateStatus(selectedOrder.id, value)}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium">{selectedOrder.customer.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Telefón</p>
+                    <p className="font-medium">{selectedOrder.customer.phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Adresa</p>
+                    <p className="font-medium">{selectedOrder.customer.address}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Items */}
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Položky objednávky</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produkt</TableHead>
+                      <TableHead className="text-right">Množstvo</TableHead>
+                      <TableHead className="text-right">Cena za kus</TableHead>
+                      <TableHead className="text-right">Celková cena</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedOrder.items.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.product.name}</TableCell>
+                        <TableCell className="text-right">{item.quantity} ks</TableCell>
+                        <TableCell className="text-right">
+                          €{parseFloat(item.product.price).toLocaleString('sk-SK', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          €{(parseFloat(item.product.price) * item.quantity).toLocaleString('sk-SK', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-right font-semibold">Celková suma</TableCell>
+                      <TableCell className="text-right font-semibold">
+                        €{selectedOrder.total_amount.toLocaleString('sk-SK', { minimumFractionDigits: 2 })}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Order Actions */}
+              <div className="flex justify-end gap-2">
+                {selectedOrder.status === 'pending' && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleStatusChange(selectedOrder.id, 'cancelled')}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Zrušiť objednávku
+                    </Button>
+                    <Button
+                      onClick={() => handleStatusChange(selectedOrder.id, 'processing')}
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Začať spracovanie
+                    </Button>
+                  </>
+                )}
+                {selectedOrder.status === 'processing' && (
+                  <Button
+                    onClick={() => handleStatusChange(selectedOrder.id, 'shipped')}
                   >
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Zmeniť stav" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Čaká na spracovanie</SelectItem>
-                      <SelectItem value="processing">Spracováva sa</SelectItem>
-                      <SelectItem value="shipped">Odoslané</SelectItem>
-                      <SelectItem value="delivered">Doručené</SelectItem>
-                      <SelectItem value="cancelled">Zrušené</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <Separator />
-                
-                <div className="grid grid-cols-2 gap-6">
-                  <div>
-                    <h3 className="font-semibold mb-2">Informácie o zákazníkovi</h3>
-                    <p className="text-sm">{selectedOrder.customer}</p>
-                    <p className="text-sm">{selectedOrder.email}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold mb-2">Platobné informácie</h3>
-                    <p className="text-sm">Stav platby: {getPaymentStatusBadge(selectedOrder.paymentStatus)}</p>
-                    <p className="text-sm mt-2">Celková suma: {selectedOrder.total.toFixed(2)} €</p>
-                  </div>
-                </div>
-                
-                <Separator />
-                
-                <div>
-                  <h3 className="font-semibold mb-2">Doručovacia adresa</h3>
-                  <p className="text-sm">{selectedOrder.shippingAddress.street}</p>
-                  <p className="text-sm">{selectedOrder.shippingAddress.postalCode} {selectedOrder.shippingAddress.city}</p>
-                  <p className="text-sm">{selectedOrder.shippingAddress.country}</p>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="products" className="space-y-4 pt-4">
-                <h3 className="font-semibold text-lg">Produkty v objednávke</h3>
-                
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Produkt</TableHead>
-                        <TableHead>Cena za kus (€)</TableHead>
-                        <TableHead>Množstvo</TableHead>
-                        <TableHead className="text-right">Celkom (€)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedOrder.items.map((item: OrderItem) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">
-                            {item.name}
-                          </TableCell>
-                          <TableCell>{item.price.toFixed(2)}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell className="text-right">
-                            {(item.price * item.quantity).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-right font-semibold">
-                          Celkom:
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {selectedOrder.total.toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="shipping" className="space-y-4 pt-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-lg">Informácie o doprave</h3>
-                    <p className="text-sm mt-2">Spôsob dopravy: {selectedOrder.shippingMethod}</p>
-                    
-                    {selectedOrder.trackingNumber ? (
-                      <div className="mt-4">
-                        <p className="text-sm">Sledovacie číslo: {selectedOrder.trackingNumber}</p>
-                        <Button variant="outline" size="sm" className="mt-2">
-                          Sledovať zásielku
-                        </Button>
-                      </div>
-                    ) : (
-                      <p className="text-sm mt-4 text-muted-foreground">
-                        Sledovacie číslo zatiaľ nie je k dispozícii
-                      </p>
-                    )}
-                  </div>
-                  
-                  {selectedOrder.status === 'processing' && (
-                    <div>
-                      <h3 className="font-semibold mb-2">Pridať sledovacie číslo</h3>
-                      <div className="flex gap-2">
-                        <Input placeholder="Zadajte sledovacie číslo" />
-                        <Button>Uložiť</Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <Separator />
-                
-                <div>
-                  <h3 className="font-semibold mb-2">Doručovacia adresa</h3>
-                  <p className="text-sm">{selectedOrder.shippingAddress.street}</p>
-                  <p className="text-sm">{selectedOrder.shippingAddress.postalCode} {selectedOrder.shippingAddress.city}</p>
-                  <p className="text-sm">{selectedOrder.shippingAddress.country}</p>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </DialogContent>
-        </Dialog>
-      )}
+                    <Package className="w-4 h-4 mr-2" />
+                    Označiť ako odoslané
+                  </Button>
+                )}
+                {selectedOrder.status === 'shipped' && (
+                  <Button
+                    onClick={() => handleStatusChange(selectedOrder.id, 'delivered')}
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Označiť ako doručené
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

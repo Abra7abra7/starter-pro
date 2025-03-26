@@ -3,12 +3,9 @@
 import { useState, useEffect } from 'react'
 import { 
   ShoppingBag, 
-  Users, 
   TrendingUp, 
-  Calendar, 
   Package, 
-  AlertTriangle,
-  ArrowUpRight
+  AlertTriangle
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,6 +22,7 @@ import {
   Cell
 } from 'recharts'
 import { createClient } from '@/utils/supabase/client'
+import { Json } from '@/types/database.types'
 
 // Initialize Supabase client
 const supabase = createClient()
@@ -37,17 +35,20 @@ interface Product {
   sku: string | null
   is_active: boolean
   image_url: string | null
-  metadata: any
+  metadata: Json | null
   created_at: string
   updated_at: string
-  inventory: Array<{ quantity: number }>
-  quantity?: number
+  total_quantity: number
 }
 
 interface DashboardData {
   products: Product[]
   totalValue: number
   lowStock: Product[]
+}
+
+interface RawProduct extends Omit<Product, 'total_quantity'> {
+  total_quantity: Array<{ quantity: number }>
 }
 
 export default function AdminDashboard() {
@@ -57,6 +58,7 @@ export default function AdminDashboard() {
     totalValue: 0,
     lowStock: []
   })
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setIsClient(true)
@@ -65,29 +67,60 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const { data: products, error } = await supabase
+      console.log('Fetching data from Supabase...')
+      const { data: products, error: supabaseError } = await supabase
         .from('products')
         .select(`
           *,
-          inventory:inventory(quantity)
+          total_quantity:inventory(quantity)
         `)
         .order('name')
 
-      if (error) throw error
+      if (supabaseError) {
+        console.error('Supabase error:', supabaseError)
+        setError(supabaseError.message)
+        return
+      }
 
-      // Process the data
-      const processedData = (products as Product[]).map(product => ({
-        ...product,
-        quantity: product.inventory?.[0]?.quantity || 0
-      }))
+      console.log('Raw products data:', products)
+
+      if (!products) {
+        console.error('No products data received')
+        setError('No products data received')
+        return
+      }
+
+      // Process the data - group by product and sum quantities
+      const productMap = new Map<string, Product>()
+      products.forEach((rawProduct: RawProduct) => {
+        const existingProduct = productMap.get(rawProduct.id)
+        const quantity = rawProduct.total_quantity?.reduce((sum, inv) => sum + (inv.quantity || 0), 0) || 0
+
+        if (existingProduct) {
+          existingProduct.total_quantity += quantity
+        } else {
+          productMap.set(rawProduct.id, {
+            ...rawProduct,
+            total_quantity: quantity
+          })
+        }
+      })
+
+      const processedData = Array.from(productMap.values())
+      console.log('Processed data:', processedData)
 
       // Calculate total inventory value
-      const totalValue = processedData.reduce((sum, product) => {
-        return sum + (parseFloat(product.price) * (product.quantity || 0))
+      const totalValue = processedData.reduce((sum: number, product: Product) => {
+        const value = parseFloat(product.price) * product.total_quantity
+        console.log(`${product.name} value: ${value} (price: ${product.price} * quantity: ${product.total_quantity})`)
+        return sum + value
       }, 0)
 
+      console.log('Total inventory value:', totalValue)
+
       // Identify low stock items (less than 20 units)
-      const lowStock = processedData.filter(product => (product.quantity || 0) < 20)
+      const lowStock = processedData.filter(product => product.total_quantity < 20)
+      console.log('Low stock items:', lowStock)
 
       setDashboardData({
         products: processedData,
@@ -96,11 +129,22 @@ export default function AdminDashboard() {
       })
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
+      setError(error instanceof Error ? error.message : 'An unknown error occurred')
     }
   }
 
   if (!isClient) {
     return <div className="flex justify-center items-center h-[80vh]">Načítavam...</div>
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-red-500">
+        <h2 className="text-lg font-bold">Error loading dashboard data:</h2>
+        <p>{error}</p>
+        <Button onClick={fetchDashboardData} className="mt-4">Retry</Button>
+      </div>
+    )
   }
 
   const COLORS = ['#B45309', '#D97706', '#F59E0B', '#FBBF24', '#FDE68A']
@@ -201,7 +245,7 @@ export default function AdminDashboard() {
                   formatter={(value) => [`${value} ks`, 'Množstvo']}
                   labelFormatter={(label) => `Produkt: ${label}`}
                 />
-                <Bar dataKey="quantity" fill="#B45309" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="total_quantity" fill="#B45309" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -222,12 +266,12 @@ export default function AdminDashboard() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, quantity, percent }) => 
-                    `${name}: ${quantity} ks (${(percent * 100).toFixed(0)}%)`
+                  label={({ name, total_quantity, percent }) => 
+                    `${name}: ${total_quantity} ks (${(percent * 100).toFixed(0)}%)`
                   }
                   outerRadius={80}
                   fill="#8884d8"
-                  dataKey="quantity"
+                  dataKey="total_quantity"
                 >
                   {dashboardData.products.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -255,12 +299,12 @@ export default function AdminDashboard() {
                 <div key={i} className="flex items-center justify-between border-b pb-2">
                   <div>
                     <p className="font-medium">{product.name}</p>
-                    <p className="text-sm text-muted-foreground">Skladom: {product.quantity} ks</p>
+                    <p className="text-sm text-muted-foreground">Skladom: {product.total_quantity} ks</p>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">€{parseFloat(product.price).toLocaleString('sk-SK', { minimumFractionDigits: 2 })}</p>
                     <p className="text-sm text-muted-foreground">
-                      Hodnota: €{(parseFloat(product.price) * (product.quantity || 0)).toLocaleString('sk-SK', { minimumFractionDigits: 2 })}
+                      Hodnota: €{(parseFloat(product.price) * product.total_quantity).toLocaleString('sk-SK', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
@@ -284,7 +328,7 @@ export default function AdminDashboard() {
                   <div>
                     <p className="font-medium">{product.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      Zostáva len {product.quantity} fliaš
+                      Zostáva len {product.total_quantity} fliaš
                     </p>
                   </div>
                 </div>

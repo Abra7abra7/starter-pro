@@ -1,27 +1,10 @@
 "use client"
 
-import { useState } from 'react'
-import { 
-  Search, 
-  Plus, 
-  Calendar, 
-  Users, 
-  MapPin,
-  Edit,
-  Trash2,
-  CheckCircle,
-  XCircle,
-  ImageIcon
-} from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Eye, Users, Plus, Mail, Phone } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -37,676 +20,536 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ImageUpload } from '@/components/ui/image-upload'
+import { createClient } from '@/utils/supabase/client'
 
-// Define TypeScript interfaces for our data
-interface Wine {
-  id: string;
-  name: string;
-  tastingOrder: number;
-}
+// Initialize Supabase client
+const supabase = createClient()
 
-interface Event {
-  id: string;
-  title: string;
-  eventType: string;
-  description: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  maxAttendees: number;
-  currentAttendees: number;
-  price: number;
-  status: 'scheduled' | 'completed' | 'cancelled';
-  isPrivate: boolean;
-  imageUrl: string;
-  wines: Wine[];
+// Types for tasting data
+interface CustomerDisplay {
+  name: string
+  email: string
+  phone: string
 }
 
 interface Registration {
-  id: string;
-  eventId: string;
-  eventTitle: string;
-  customerId: string;
-  customerName: string;
-  email: string;
-  phone: string;
-  registrationDate: string;
-  numberOfGuests: number;
-  status: string;
-  paymentStatus: string;
-  totalPrice: number;
+  id: string
+  customer_id: string
+  num_guests: number
+  total_amount: number
+  created_at: string
+  customer: CustomerDisplay
 }
 
-// Mock data for events
-const mockEvents: Event[] = [
-  {
-    id: '1',
-    title: 'Jarná degustácia',
-    eventType: 'Degustácia',
-    description: 'Ochutnávka jarných vín z našej produkcie',
-    startTime: '2025-04-15T18:00:00Z',
-    endTime: '2025-04-15T21:00:00Z',
-    location: 'Vinárstvo Pútec, Hlavná 123, Bratislava',
-    maxAttendees: 30,
-    currentAttendees: 12,
-    price: 25.00,
-    status: 'scheduled',
-    isPrivate: false,
-    imageUrl: '/images/events/spring-tasting.jpg',
-    wines: [
-      { id: '1', name: 'Cabernet Sauvignon 2022', tastingOrder: 1 },
-      { id: '2', name: 'Chardonnay 2023', tastingOrder: 2 },
-      { id: '4', name: 'Rizling Rýnsky 2022', tastingOrder: 3 }
-    ]
-  },
-  {
-    id: '2',
-    title: 'Víkendový workshop výroby vína',
-    eventType: 'Workshop',
-    description: 'Naučte sa základy výroby vína priamo v našom vinárstve',
-    startTime: '2025-05-10T10:00:00Z',
-    endTime: '2025-05-11T16:00:00Z',
-    location: 'Vinárstvo Pútec, Hlavná 123, Bratislava',
-    maxAttendees: 15,
-    currentAttendees: 8,
-    price: 120.00,
-    status: 'scheduled',
-    isPrivate: false,
-    imageUrl: '/images/events/wine-workshop.jpg',
-    wines: [
-      { id: '1', name: 'Cabernet Sauvignon 2022', tastingOrder: 1 },
-      { id: '3', name: 'Frankovka Modrá 2021', tastingOrder: 2 },
-      { id: '5', name: 'Svätovavrinecké 2020', tastingOrder: 3 }
-    ]
-  },
-  {
-    id: '3',
-    title: 'Privátna degustácia pre firmu XYZ',
-    eventType: 'Privátna degustácia',
-    description: 'Uzavretá degustácia pre zamestnancov firmy XYZ',
-    startTime: '2025-04-05T19:00:00Z',
-    endTime: '2025-04-05T22:00:00Z',
-    location: 'Vinárstvo Pútec, Hlavná 123, Bratislava',
-    maxAttendees: 20,
-    currentAttendees: 20,
-    price: 35.00,
-    status: 'scheduled',
-    isPrivate: true,
-    imageUrl: '/images/events/private-tasting.jpg',
-    wines: [
-      { id: '2', name: 'Chardonnay 2023', tastingOrder: 1 },
-      { id: '6', name: 'Tramín Červený 2023', tastingOrder: 2 },
-      { id: '4', name: 'Rizling Rýnsky 2022', tastingOrder: 3 }
-    ]
-  },
-  {
-    id: '4',
-    title: 'Ochutnávka archívnych vín',
-    eventType: 'Degustácia',
-    description: 'Exkluzívna ochutnávka archívnych vín z našej pivnice',
-    startTime: '2025-03-20T18:00:00Z',
-    endTime: '2025-03-20T21:00:00Z',
-    location: 'Vinárstvo Pútec, Hlavná 123, Bratislava',
-    maxAttendees: 25,
-    currentAttendees: 25,
-    price: 50.00,
-    status: 'completed',
-    isPrivate: false,
-    imageUrl: '/images/events/archive-tasting.jpg',
-    wines: [
-      { id: '5', name: 'Svätovavrinecké 2020', tastingOrder: 1 },
-      { id: '1', name: 'Cabernet Sauvignon 2022', tastingOrder: 2 }
-    ]
-  }
-]
+interface TastingSession {
+  id: string
+  title: string
+  description: string
+  date: string
+  max_participants: number
+  price: number
+  location: string
+  created_at: string
+  registrations: Registration[]
+  total_registrations: number
+  total_revenue: number
+}
 
-// Mock data for registrations
-const mockRegistrations: Registration[] = [
-  {
-    id: '1',
-    eventId: '1',
-    eventTitle: 'Jarná degustácia',
-    customerId: '1',
-    customerName: 'Ján Novák',
-    email: 'jan.novak@example.com',
-    phone: '+421 900 123 456',
-    registrationDate: '2025-03-15T10:30:00Z',
-    numberOfGuests: 2,
-    status: 'registered',
-    paymentStatus: 'paid',
-    totalPrice: 50.00
-  }
-]
+interface TastingFormData {
+  title: string
+  description: string
+  date: string
+  max_participants: number
+  price: number
+  location: string
+}
 
-export default function EventsPage() {
-  const [events, setEvents] = useState<Event[]>(mockEvents)
-  const [registrations] = useState<Registration[]>(mockRegistrations)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [openDialog, setOpenDialog] = useState(false)
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
-  const [activeTab, setActiveTab] = useState('events')
-  
-  const filteredEvents = events.filter(event => {
-    const matchesSearch = 
-      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.location.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = 
-      statusFilter === 'all' || 
-      event.status === statusFilter
-    
-    return matchesSearch && matchesStatus
+export default function TastingsPage() {
+  const [tastings, setTastings] = useState<TastingSession[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedTasting, setSelectedTasting] = useState<TastingSession | null>(null)
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [formData, setFormData] = useState<TastingFormData>({
+    title: '',
+    description: '',
+    date: '',
+    max_participants: 20,
+    price: 0,
+    location: ''
   })
-  
-  const handleAddEvent = () => {
-    setSelectedEvent(null)
-    setOpenDialog(true)
-  }
-  
-  const handleEditEvent = (event: Event) => {
-    setSelectedEvent(event)
-    setOpenDialog(true)
-  }
-  
-  const handleDeleteEvent = (id: string) => {
-    if (confirm('Naozaj chcete odstrániť túto udalosť?')) {
-      setEvents(events.filter(event => event.id !== id))
+
+  // Subscribe to real-time changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('tastings_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tasting_sessions'
+        },
+        () => {
+          fetchTastings() // Refresh data when changes occur
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
     }
-  }
-  
-  const handleSaveEvent = (formData: Event) => {
-    if (selectedEvent) {
-      // Update existing event
-      setEvents(events.map(event => 
-        event.id === selectedEvent.id ? { ...event, ...formData } : event
-      ))
-    } else {
-      // Add new event
-      const newEvent: Event = {
-        ...formData,
-        id: (events.length + 1).toString(),
-        currentAttendees: 0,
-        status: 'scheduled',
-        wines: []
+  }, [])
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchTastings()
+  }, [])
+
+  const fetchTastings = async () => {
+    try {
+      setLoading(true)
+      const { data, error: supabaseError } = await supabase
+        .from('tasting_sessions')
+        .select(`
+          id,
+          title,
+          description,
+          date,
+          max_participants,
+          price,
+          location,
+          created_at,
+          registrations!left (
+            id,
+            customer_id,
+            num_guests,
+            total_amount,
+            created_at,
+            customer:customers!left (
+              first_name,
+              last_name,
+              email,
+              phone
+            )
+          )
+        `)
+        .order('date', { ascending: true })
+
+      if (supabaseError) throw supabaseError
+
+      if (!data) {
+        throw new Error('No tastings data received')
       }
-      setEvents([...events, newEvent])
+
+      // Process tasting data to include total registrations and revenue
+      const processedTastings: TastingSession[] = data.map(tasting => {
+        type RawCustomer = {
+          first_name: string
+          last_name: string
+          email: string
+          phone: string
+        }
+
+        type RawRegistration = {
+          id: string
+          customer_id: string
+          num_guests: number
+          total_amount: number
+          created_at: string
+          customer: RawCustomer
+        }
+
+        // Transform registrations to match our display format
+        const registrations: Registration[] = ((tasting.registrations || []) as unknown as RawRegistration[]).map(reg => ({
+          id: reg.id,
+          customer_id: reg.customer_id,
+          num_guests: reg.num_guests,
+          total_amount: reg.total_amount,
+          created_at: reg.created_at,
+          customer: reg.customer ? {
+            name: `${reg.customer.first_name} ${reg.customer.last_name}`,
+            email: reg.customer.email,
+            phone: reg.customer.phone
+          } : {
+            name: 'Neznámy zákazník',
+            email: '',
+            phone: ''
+          }
+        }))
+
+        return {
+          ...tasting,
+          registrations,
+          total_registrations: registrations.reduce((sum, reg) => sum + reg.num_guests, 0),
+          total_revenue: registrations.reduce((sum, reg) => sum + reg.total_amount, 0)
+        }
+      })
+
+      setTastings(processedTastings)
+    } catch (error) {
+      console.error('Error fetching tastings:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while fetching tastings')
+    } finally {
+      setLoading(false)
     }
-    setOpenDialog(false)
   }
-  
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'scheduled':
-        return (
-          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <Calendar className="h-3 w-3 mr-1" />
-            Naplánované
-          </Badge>
-        )
-      case 'completed':
-        return (
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Ukončené
-          </Badge>
-        )
-      case 'cancelled':
-        return (
-          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-            <XCircle className="h-3 w-3 mr-1" />
-            Zrušené
-          </Badge>
-        )
-      default:
-        return (
-          <Badge>
-            {status}
-          </Badge>
-        )
+
+  const handleAddTasting = async () => {
+    try {
+      const { error } = await supabase
+        .from('tasting_sessions')
+        .insert([{
+          title: formData.title,
+          description: formData.description,
+          date: formData.date,
+          max_participants: formData.max_participants,
+          price: formData.price,
+          location: formData.location
+        }])
+
+      if (error) throw error
+
+      setIsAddDialogOpen(false)
+      setFormData({
+        title: '',
+        description: '',
+        date: '',
+        max_participants: 20,
+        price: 0,
+        location: ''
+      })
+      await fetchTastings()
+    } catch (error) {
+      console.error('Error adding tasting:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while adding the tasting')
     }
   }
-  
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('sk-SK', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(date)
+
+  const filteredTastings = tastings.filter(tasting =>
+    tasting.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    tasting.location.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-[80vh]">Načítavam...</div>
   }
-  
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('sk-SK', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date)
+
+  if (error) {
+    return (
+      <div className="p-4 text-red-500">
+        <h2 className="text-lg font-bold">Error:</h2>
+        <p>{error}</p>
+        <Button onClick={fetchTastings} className="mt-4">Retry</Button>
+      </div>
+    )
   }
-  
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('sk-SK', {
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date)
-  }
-  
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">Degustácie a udalosti</h1>
-        <Button onClick={handleAddEvent} className="flex items-center gap-1">
-          <Plus className="h-4 w-4" />
-          Vytvoriť novú udalosť
-        </Button>
-      </div>
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="events">Udalosti</TabsTrigger>
-          <TabsTrigger value="registrations">Registrácie</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="events" className="space-y-4 pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Správa udalostí</CardTitle>
-              <CardDescription>
-                Prehľad všetkých degustácií a udalostí
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Vyhľadať udalosť..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <Select
-                  value={statusFilter}
-                  onValueChange={setStatusFilter}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Stav udalosti" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Všetky stavy</SelectItem>
-                    <SelectItem value="scheduled">Naplánované</SelectItem>
-                    <SelectItem value="completed">Ukončené</SelectItem>
-                    <SelectItem value="cancelled">Zrušené</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Názov</TableHead>
-                      <TableHead>Dátum</TableHead>
-                      <TableHead>Miesto</TableHead>
-                      <TableHead>Účastníci</TableHead>
-                      <TableHead>Stav</TableHead>
-                      <TableHead className="text-right">Akcie</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEvents.length > 0 ? (
-                      filteredEvents.map((event) => (
-                        <TableRow key={event.id}>
-                          <TableCell className="font-medium">
-                            <div>
-                              <div>{event.title}</div>
-                              <div className="text-sm text-muted-foreground">{event.eventType}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div>{formatDate(event.startTime)}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {formatTime(event.startTime)} - {formatTime(event.endTime)}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-                              <span className="truncate max-w-[200px]">{event.location}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <Users className="h-4 w-4 mr-1 text-muted-foreground" />
-                              <span>{event.currentAttendees}/{event.maxAttendees}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(event.status)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEditEvent(event)}
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span className="sr-only">Upraviť</span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteEvent(event.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="sr-only">Odstrániť</span>
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                          Nenašli sa žiadne udalosti
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="registrations" className="space-y-4 pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Registrácie na udalosti</CardTitle>
-              <CardDescription>
-                Prehľad všetkých registrácií zákazníkov
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Zákazník</TableHead>
-                      <TableHead>Udalosť</TableHead>
-                      <TableHead>Dátum registrácie</TableHead>
-                      <TableHead>Počet osôb</TableHead>
-                      <TableHead>Stav platby</TableHead>
-                      <TableHead className="text-right">Suma (€)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {registrations.map((registration) => (
-                      <TableRow key={registration.id}>
-                        <TableCell className="font-medium">
-                          <div>
-                            <div>{registration.customerName}</div>
-                            <div className="text-sm text-muted-foreground">{registration.email}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{registration.eventTitle}</TableCell>
-                        <TableCell>{formatDateTime(registration.registrationDate)}</TableCell>
-                        <TableCell>{registration.numberOfGuests}</TableCell>
-                        <TableCell>
-                          {registration.paymentStatus === 'paid' ? (
-                            <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                              Zaplatené
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-                              Čaká na platbu
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {registration.totalPrice.toFixed(2)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      
-      <EventDialog 
-        open={openDialog} 
-        onOpenChange={setOpenDialog}
-        event={selectedEvent}
-        onSave={handleSaveEvent}
-      />
-    </div>
-  )
-}
-
-function EventDialog({ 
-  open, 
-  onOpenChange, 
-  event, 
-  onSave 
-}: { 
-  open: boolean, 
-  onOpenChange: (open: boolean) => void, 
-  event: Event | null,
-  onSave: (formData: Event) => void
-}) {
-  const [formData, setFormData] = useState({
-    title: event?.title || '',
-    eventType: event?.eventType || 'Degustácia',
-    description: event?.description || '',
-    startTime: event?.startTime ? new Date(event.startTime).toISOString().slice(0, 16) : '',
-    endTime: event?.endTime ? new Date(event.endTime).toISOString().slice(0, 16) : '',
-    location: event?.location || 'Vinárstvo Pútec, Hlavná 123, Bratislava',
-    maxAttendees: event?.maxAttendees || 30,
-    price: event?.price || 25.00,
-    isPrivate: event?.isPrivate || false,
-    imageUrl: event?.imageUrl || ''
-  })
-  
-  const handleChange = (field: keyof typeof formData, value: string | number | boolean) => {
-    setFormData({
-      ...formData,
-      [field]: value
-    })
-  }
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSave(formData as Event)
-  }
-
-  const handleImageUpload = (urls: string[]) => {
-    if (urls.length > 0) {
-      setFormData({
-        ...formData,
-        imageUrl: urls[0]
-      })
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>{event ? 'Upraviť udalosť' : 'Vytvoriť novú udalosť'}</DialogTitle>
-            <DialogDescription>
-              {event 
-                ? 'Upravte detaily existujúcej udalosti' 
-                : 'Vyplňte formulár pre vytvorenie novej udalosti'}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Názov udalosti</Label>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Degustácie</h1>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Pridať degustáciu
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Pridať novú degustáciu</DialogTitle>
+              <DialogDescription>
+                Vyplňte údaje o novej degustácii. Všetky polia označené * sú povinné.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title">Názov *</Label>
                 <Input
                   id="title"
                   value={formData.title}
-                  onChange={(e) => handleChange('title', e.target.value)}
-                  required
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="eventType">Typ udalosti</Label>
-                <Select 
-                  value={formData.eventType} 
-                  onValueChange={(value) => handleChange('eventType', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Vyberte typ udalosti" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Degustácia">Degustácia</SelectItem>
-                    <SelectItem value="Workshop">Workshop</SelectItem>
-                    <SelectItem value="Privátna degustácia">Privátna degustácia</SelectItem>
-                    <SelectItem value="Festival">Festival</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid gap-2">
+                <Label htmlFor="description">Popis</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                />
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Popis</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleChange('description', e.target.value)}
-                rows={3}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startTime">Začiatok</Label>
+              <div className="grid gap-2">
+                <Label htmlFor="date">Dátum a čas *</Label>
                 <Input
-                  id="startTime"
+                  id="date"
                   type="datetime-local"
-                  value={formData.startTime}
-                  onChange={(e) => handleChange('startTime', e.target.value)}
-                  required
+                  value={formData.date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="endTime">Koniec</Label>
+              <div className="grid gap-2">
+                <Label htmlFor="max_participants">Maximálny počet účastníkov *</Label>
                 <Input
-                  id="endTime"
-                  type="datetime-local"
-                  value={formData.endTime}
-                  onChange={(e) => handleChange('endTime', e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="location">Miesto konania</Label>
-              <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => handleChange('location', e.target.value)}
-                required
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="maxAttendees">Maximálny počet účastníkov</Label>
-                <Input
-                  id="maxAttendees"
+                  id="max_participants"
                   type="number"
                   min="1"
-                  value={formData.maxAttendees}
-                  onChange={(e) => handleChange('maxAttendees', parseInt(e.target.value))}
-                  required
+                  value={formData.max_participants}
+                  onChange={(e) => setFormData(prev => ({ ...prev, max_participants: parseInt(e.target.value) }))}
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="price">Cena na osobu (€)</Label>
+              <div className="grid gap-2">
+                <Label htmlFor="price">Cena na osobu *</Label>
                 <Input
                   id="price"
                   type="number"
                   step="0.01"
-                  min="0"
                   value={formData.price}
-                  onChange={(e) => handleChange('price', parseFloat(e.target.value))}
-                  required
+                  onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="location">Miesto konania *</Label>
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                 />
               </div>
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="isPrivate"
-                checked={formData.isPrivate}
-                onChange={(e) => handleChange('isPrivate', e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              <Label htmlFor="isPrivate">Privátna udalosť (nebude zobrazená verejne)</Label>
-            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                Zrušiť
+              </Button>
+              <Button onClick={handleAddTasting}>
+                Pridať degustáciu
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
 
-            <div className="space-y-4 mt-6">
-              <div className="flex items-center">
-                <ImageIcon className="mr-2 h-5 w-5" />
-                <h3 className="text-lg font-medium">Obrázky udalosti</h3>
-              </div>
-              
-              <ImageUpload 
-                onUploadComplete={handleImageUpload}
-                maxFiles={1}
-                bucket="tasting-images"
-                folder="events"
-              />
-            </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Zoznam degustácií</CardTitle>
+          <CardDescription>
+            Správa všetkých degustácií v systéme
+          </CardDescription>
+          <div className="flex items-center space-x-2">
+            <Search className="w-4 h-4 text-gray-500" />
+            <Input
+              placeholder="Hľadať podľa názvu alebo miesta konania..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
           </div>
-          
-          <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Zrušiť
-            </Button>
-            <Button type="submit">
-              {event ? 'Uložiť zmeny' : 'Vytvoriť udalosť'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Názov</TableHead>
+                <TableHead>Dátum</TableHead>
+                <TableHead>Miesto</TableHead>
+                <TableHead>Registrácie</TableHead>
+                <TableHead>Tržba</TableHead>
+                <TableHead>Akcie</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredTastings.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-4">
+                    {searchQuery ? 'Nenašli sa žiadne degustácie' : 'Zatiaľ nie sú vytvorené žiadne degustácie'}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredTastings.map((tasting) => (
+                <TableRow key={tasting.id}>
+                  <TableCell className="font-medium">{tasting.title}</TableCell>
+                  <TableCell>
+                    {new Date(tasting.date).toLocaleDateString('sk-SK', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </TableCell>
+                  <TableCell>{tasting.location}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      {tasting.total_registrations} / {tasting.max_participants}
+                    </div>
+                  </TableCell>
+                  <TableCell>€{tasting.total_revenue.toLocaleString('sk-SK', { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedTasting(tasting)
+                        setIsDetailsDialogOpen(true)
+                      }}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Tasting Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Detail degustácie</DialogTitle>
+            <DialogDescription>
+              Kompletné informácie o degustácii a registrovaných účastníkoch
+            </DialogDescription>
+          </DialogHeader>
+          {selectedTasting && (
+            <div className="grid gap-6">
+              {/* Tasting Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Informácie o degustácii</h3>
+                <div className="grid gap-4">
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-muted-foreground">Názov</div>
+                    <div className="font-medium">{selectedTasting.title}</div>
+                  </div>
+                  <div className="flex items-start">
+                    <div className="w-32 text-sm text-muted-foreground">Popis</div>
+                    <div className="font-medium">{selectedTasting.description}</div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-muted-foreground">Dátum a čas</div>
+                    <div className="font-medium">
+                      {new Date(selectedTasting.date).toLocaleDateString('sk-SK', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-muted-foreground">Miesto</div>
+                    <div className="font-medium">{selectedTasting.location}</div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-muted-foreground">Kapacita</div>
+                    <div className="font-medium">{selectedTasting.max_participants} osôb</div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-muted-foreground">Cena</div>
+                    <div className="font-medium">€{selectedTasting.price.toLocaleString('sk-SK', { minimumFractionDigits: 2 })} / osoba</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Registration List */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Zoznam registrácií</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Meno</TableHead>
+                      <TableHead>Kontakt</TableHead>
+                      <TableHead>Počet osôb</TableHead>
+                      <TableHead>Suma</TableHead>
+                      <TableHead>Dátum registrácie</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedTasting.registrations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-4">
+                          Zatiaľ nie sú žiadne registrácie
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      selectedTasting.registrations
+                        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                        .map((registration) => (
+                        <TableRow key={registration.id}>
+                          <TableCell className="font-medium">{registration.customer.name}</TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <Mail className="w-4 h-4 mr-2" />
+                                {registration.customer.email}
+                              </div>
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <Phone className="w-4 h-4 mr-2" />
+                                {registration.customer.phone}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>{registration.num_guests}</TableCell>
+                          <TableCell>€{registration.total_amount.toLocaleString('sk-SK', { minimumFractionDigits: 2 })}</TableCell>
+                          <TableCell>
+                            {new Date(registration.created_at).toLocaleDateString('sk-SK', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </TableCell>
+                        </TableRow>
+                    )))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Tasting Statistics */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Obsadenosť
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {selectedTasting.total_registrations} / {selectedTasting.max_participants}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {((selectedTasting.total_registrations / selectedTasting.max_participants) * 100).toFixed(0)}% kapacity
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Celková tržba
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      €{selectedTasting.total_revenue.toLocaleString('sk-SK', { minimumFractionDigits: 2 })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

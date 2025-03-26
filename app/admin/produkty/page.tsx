@@ -1,24 +1,10 @@
 "use client"
 
-import { useState } from 'react'
-import { 
-  Search, 
-  Plus, 
-  Edit, 
-  Trash2,
-  Filter,
-  ChevronDown,
-  Wine,
-} from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Pencil, Trash2, Search } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -34,500 +20,475 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import Image from 'next/image'
-import { ImageUpload } from '@/components/ui/image-upload'
+import { createClient } from '@/utils/supabase/client'
+import { Json } from '@/types/database.types'
 
-// Define types for the wine product
-interface WineProduct {
-  id: string
-  name: string
-  vintage: number
-  category: string
-  variety: string
-  price: number
-  stock: number
-  vineyard: string
-  status: 'active' | 'low_stock' | 'out_of_stock'
-  description?: string
-  image?: string
-  images?: { url: string; alt_text?: string; is_primary?: boolean }[]
+// Initialize Supabase client
+const supabase = createClient()
+
+interface InventoryItem {
+  quantity: number
 }
 
-// Mock data - would be replaced with real data from Supabase
-const mockWines: WineProduct[] = [
-  {
-    id: '1',
-    name: 'Cabernet Sauvignon',
-    vintage: 2022,
-    category: 'Červené',
-    variety: 'Cabernet Sauvignon',
-    price: 15.99,
-    stock: 42,
-    vineyard: 'Vinárstvo Pútec',
-    status: 'active'
-  },
-  {
-    id: '2',
-    name: 'Chardonnay',
-    vintage: 2023,
-    category: 'Biele',
-    variety: 'Chardonnay',
-    price: 12.99,
-    stock: 28,
-    vineyard: 'Vinárstvo Pútec',
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'Frankovka Modrá',
-    vintage: 2021,
-    category: 'Červené',
-    variety: 'Frankovka Modrá',
-    price: 14.50,
-    stock: 15,
-    vineyard: 'Vinárstvo Pútec',
-    status: 'active'
-  },
-  {
-    id: '4',
-    name: 'Rizling Rýnsky',
-    vintage: 2022,
-    category: 'Biele',
-    variety: 'Rizling Rýnsky',
-    price: 13.99,
-    stock: 33,
-    vineyard: 'Vinárstvo Pútec',
-    status: 'active'
-  },
-  {
-    id: '5',
-    name: 'Svätovavrinecké',
-    vintage: 2020,
-    category: 'Červené',
-    variety: 'Svätovavrinecké',
-    price: 16.50,
-    stock: 5,
-    vineyard: 'Vinárstvo Pútec',
-    status: 'low_stock'
-  },
-  {
-    id: '6',
-    name: 'Tramín Červený',
-    vintage: 2023,
-    category: 'Biele',
-    variety: 'Tramín Červený',
-    price: 18.99,
-    stock: 0,
-    vineyard: 'Vinárstvo Pútec',
-    status: 'out_of_stock'
-  },
+interface Product {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  sku: string | null
+  is_active: boolean
+  image_url: string | null
+  metadata: Json | null
+  created_at: string
+  updated_at: string
+  total_quantity: number
+}
+
+interface RawProduct extends Omit<Product, 'total_quantity'> {
+  total_quantity: InventoryItem[]
+}
+
+interface ProductFormData {
+  name: string
+  description: string
+  price: string
+  sku: string
+  is_active: boolean
+  image_url: string
+}
+
+// Warehouse IDs from the database
+const WAREHOUSE_IDS = [
+  'a4400ebc-a2f8-4242-b242-8bd5692ebaa9', // Cellar One
+  '0bb9499a-d7dc-4e87-86c0-14115c1753b9', // Main Storage
+  '950718e1-470d-4a38-ba4d-49d81af2727a'  // Reserve Vault
 ]
 
 export default function ProductsPage() {
-  const [wines, setWines] = useState(mockWines)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [openDialog, setOpenDialog] = useState(false)
-  const [selectedWine, setSelectedWine] = useState<WineProduct | null>(null)
-  
-  const filteredWines = wines.filter(wine => 
-    wine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    wine.variety.toLowerCase().includes(searchTerm.toLowerCase())
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [formData, setFormData] = useState<ProductFormData>({
+    name: '',
+    description: '',
+    price: '',
+    sku: '',
+    is_active: true,
+    image_url: ''
+  })
+
+  // Subscribe to real-time changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('products_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products'
+        },
+        () => {
+          fetchProducts() // Refresh data when changes occur
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchProducts()
+  }, [])
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true)
+      const { data: products, error: supabaseError } = await supabase
+        .from('products')
+        .select(`
+          *,
+          total_quantity:inventory(quantity)
+        `)
+        .order('name')
+
+      if (supabaseError) throw supabaseError
+
+      // Process the data to sum quantities
+      const processedProducts = (products as RawProduct[]).map(product => ({
+        ...product,
+        total_quantity: product.total_quantity?.reduce((sum, inv) => sum + (inv.quantity || 0), 0) || 0
+      }))
+
+      setProducts(processedProducts)
+    } catch (error) {
+      console.error('Error fetching products:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while fetching products')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddProduct = async () => {
+    try {
+      // Validate price is a valid number
+      const price = parseFloat(formData.price)
+      if (isNaN(price)) {
+        throw new Error('Please enter a valid price')
+      }
+
+      // First, insert the product
+      const { data: newProduct, error: productError } = await supabase
+        .from('products')
+        .insert([
+          {
+            name: formData.name,
+            description: formData.description || null,
+            price: price,
+            sku: formData.sku || null,
+            is_active: formData.is_active,
+            image_url: formData.image_url || null
+          }
+        ])
+        .select()
+        .single()
+
+      if (productError) throw productError
+
+      // Then, create inventory records for each warehouse
+      const inventoryRecords = WAREHOUSE_IDS.map(warehouseId => ({
+        product_id: newProduct.id,
+        warehouse_id: warehouseId,
+        quantity: 0,
+        min_stock_level: 5,
+        max_stock_level: 100
+      }))
+
+      const { error: inventoryError } = await supabase
+        .from('inventory')
+        .insert(inventoryRecords)
+
+      if (inventoryError) throw inventoryError
+
+      setIsAddDialogOpen(false)
+      setFormData({
+        name: '',
+        description: '',
+        price: '',
+        sku: '',
+        is_active: true,
+        image_url: ''
+      })
+      await fetchProducts()
+    } catch (error) {
+      console.error('Error adding product:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while adding the product')
+    }
+  }
+
+  const handleUpdateProduct = async () => {
+    if (!editingProduct) return
+
+    try {
+      // Validate price is a valid number
+      const price = parseFloat(formData.price)
+      if (isNaN(price)) {
+        throw new Error('Please enter a valid price')
+      }
+
+      const { error } = await supabase
+        .from('products')
+        .update({
+          name: formData.name,
+          description: formData.description || null,
+          price: price,
+          sku: formData.sku || null,
+          is_active: formData.is_active,
+          image_url: formData.image_url || null
+        })
+        .eq('id', editingProduct.id)
+
+      if (error) throw error
+
+      setEditingProduct(null)
+      setFormData({
+        name: '',
+        description: '',
+        price: '',
+        sku: '',
+        is_active: true,
+        image_url: ''
+      })
+      await fetchProducts()
+    } catch (error) {
+      console.error('Error updating product:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while updating the product')
+    }
+  }
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) return
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', productId)
+
+      if (error) throw error
+
+      await fetchProducts()
+    } catch (error) {
+      console.error('Error deleting product:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while deleting the product')
+    }
+  }
+
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.sku?.toLowerCase().includes(searchQuery.toLowerCase())
   )
-  
-  const handleEdit = (wine: WineProduct) => {
-    setSelectedWine(wine)
-    setOpenDialog(true)
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-[80vh]">Načítavam...</div>
   }
-  
-  const handleDelete = (id: string) => {
-    if (confirm('Naozaj chcete odstrániť tento produkt?')) {
-      setWines(wines.filter(wine => wine.id !== id))
-    }
+
+  if (error) {
+    return (
+      <div className="p-4 text-red-500">
+        <h2 className="text-lg font-bold">Error:</h2>
+        <p>{error}</p>
+        <Button onClick={fetchProducts} className="mt-4">Retry</Button>
+      </div>
+    )
   }
-  
-  const handleAddNew = () => {
-    setSelectedWine(null)
-    setOpenDialog(true)
-  }
-  
-  const handleSave = (formData: Partial<WineProduct>) => {
-    if (selectedWine) {
-      // Update existing wine
-      setWines(wines.map(wine => 
-        wine.id === selectedWine.id ? { ...wine, ...formData } : wine
-      ))
-    } else {
-      // Add new wine
-      const newWine = {
-        id: (wines.length + 1).toString(),
-        ...formData,
-        status: formData.stock && formData.stock > 10 ? 'active' : formData.stock && formData.stock > 0 ? 'low_stock' : 'out_of_stock'
-      } as WineProduct
-      setWines([...wines, newWine])
-    }
-    setOpenDialog(false)
-  }
-  
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">Správa produktov</h1>
-        <Button onClick={handleAddNew} className="flex items-center gap-1">
-          <Plus className="h-4 w-4" />
-          Pridať nový produkt
-        </Button>
-      </div>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Produkty</CardTitle>
-          <CardDescription>
-            Spravujte váš katalóg vín a sledujte stav zásob
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Vyhľadať produkt..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Select defaultValue="all">
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Kategória" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Všetky kategórie</SelectItem>
-                  <SelectItem value="cervene">Červené vína</SelectItem>
-                  <SelectItem value="biele">Biele vína</SelectItem>
-                  <SelectItem value="ruzove">Ružové vína</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Button variant="outline" className="flex items-center gap-1">
-                <Filter className="h-4 w-4" />
-                Filtre
-                <ChevronDown className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          </div>
-          
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[80px]">Foto</TableHead>
-                  <TableHead className="min-w-[150px]">Názov</TableHead>
-                  <TableHead>Ročník</TableHead>
-                  <TableHead>Kategória</TableHead>
-                  <TableHead>Odroda</TableHead>
-                  <TableHead className="text-right">Cena</TableHead>
-                  <TableHead className="text-right">Skladom</TableHead>
-                  <TableHead className="text-right">Stav</TableHead>
-                  <TableHead className="text-right">Akcie</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredWines.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center">
-                      Nenašli sa žiadne produkty
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredWines.map((wine) => (
-                    <TableRow key={wine.id}>
-                      <TableCell>
-                        <div className="h-12 w-12 rounded-md bg-gray-100 flex items-center justify-center">
-                          {wine.image ? (
-                            <Image
-                              src={wine.image}
-                              alt={wine.name}
-                              width={48}
-                              height={48}
-                              className="rounded-md object-cover"
-                            />
-                          ) : (
-                            <Wine className="h-6 w-6 text-gray-400" />
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{wine.name}</TableCell>
-                      <TableCell>{wine.vintage}</TableCell>
-                      <TableCell>{wine.category}</TableCell>
-                      <TableCell>{wine.variety}</TableCell>
-                      <TableCell className="text-right">{wine.price.toFixed(2)} €</TableCell>
-                      <TableCell className="text-right">{wine.stock}</TableCell>
-                      <TableCell className="text-right">
-                        {wine.status === 'active' && (
-                          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Aktívny</Badge>
-                        )}
-                        {wine.status === 'low_stock' && (
-                          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Nízky stav</Badge>
-                        )}
-                        {wine.status === 'out_of_stock' && (
-                          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Vypredané</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(wine)}
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Upraviť</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(wine.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Odstrániť</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <ProductDialog 
-        open={openDialog} 
-        onOpenChange={setOpenDialog}
-        wine={selectedWine}
-        onSave={handleSave}
-      />
-    </div>
-  )
-}
-
-function ProductDialog({ 
-  open, 
-  onOpenChange, 
-  wine, 
-  onSave 
-}: { 
-  open: boolean, 
-  onOpenChange: (open: boolean) => void, 
-  wine: WineProduct | null,
-  onSave: (formData: Partial<WineProduct>) => void
-}) {
-  const [formData, setFormData] = useState<Partial<WineProduct>>({
-    name: wine?.name || '',
-    vintage: wine?.vintage || new Date().getFullYear(),
-    category: wine?.category || 'Červené',
-    variety: wine?.variety || '',
-    price: wine?.price || 0,
-    stock: wine?.stock || 0,
-    vineyard: wine?.vineyard || 'Vinárstvo Pútec',
-    description: wine?.description || '',
-    images: wine?.images || []
-  })
-  
-  const handleChange = (field: keyof WineProduct, value: string | number) => {
-    setFormData({
-      ...formData,
-      [field]: value
-    })
-  }
-  
-  const handleImageUpload = (url: string) => {
-    const newImages = formData.images ? [...formData.images] : []
-    newImages.push({
-      url,
-      is_primary: newImages.length === 0
-    })
-    setFormData({
-      ...formData,
-      images: newImages
-    })
-  }
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSave(formData)
-  }
-  
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{wine ? 'Upraviť produkt' : 'Pridať nový produkt'}</DialogTitle>
-          <DialogDescription>
-            {wine 
-              ? 'Upravte detaily existujúceho produktu' 
-              : 'Vyplňte informácie o novom produkte'
-            }
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-6 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Názov vína</Label>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Produkty</h1>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Pridať produkt
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Pridať nový produkt</DialogTitle>
+              <DialogDescription>
+                Vyplňte údaje o novom produkte. Všetky polia označené * sú povinné.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Názov *</Label>
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => handleChange('name', e.target.value)}
-                  required
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="vintage">Ročník</Label>
-                <Input
-                  id="vintage"
-                  type="number"
-                  value={formData.vintage}
-                  onChange={(e) => handleChange('vintage', parseInt(e.target.value))}
-                  required
+              <div className="grid gap-2">
+                <Label htmlFor="description">Popis</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 />
               </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Kategória</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => handleChange('category', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Vyberte kategóriu" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Červené">Červené</SelectItem>
-                    <SelectItem value="Biele">Biele</SelectItem>
-                    <SelectItem value="Ružové">Ružové</SelectItem>
-                    <SelectItem value="Šumivé">Šumivé</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="variety">Odroda</Label>
-                <Input
-                  id="variety"
-                  value={formData.variety}
-                  onChange={(e) => handleChange('variety', e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="price">Cena (€)</Label>
+              <div className="grid gap-2">
+                <Label htmlFor="price">Cena *</Label>
                 <Input
                   id="price"
                   type="number"
                   step="0.01"
+                  min="0"
                   value={formData.price}
-                  onChange={(e) => handleChange('price', parseFloat(e.target.value))}
-                  required
+                  onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="stock">Skladom (ks)</Label>
+              <div className="grid gap-2">
+                <Label htmlFor="sku">SKU</Label>
                 <Input
-                  id="stock"
-                  type="number"
-                  value={formData.stock}
-                  onChange={(e) => handleChange('stock', parseInt(e.target.value))}
-                  required
+                  id="sku"
+                  value={formData.sku}
+                  onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="image_url">URL obrázka</Label>
+                <Input
+                  id="image_url"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
                 />
               </div>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="vineyard">Vinárstvo</Label>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                Zrušiť
+              </Button>
+              <Button onClick={handleAddProduct}>
+                Pridať produkt
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Zoznam produktov</CardTitle>
+          <CardDescription>
+            Správa všetkých produktov v systéme
+          </CardDescription>
+          <div className="flex items-center space-x-2">
+            <Search className="w-4 h-4 text-gray-500" />
+            <Input
+              placeholder="Hľadať podľa názvu alebo SKU..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Názov</TableHead>
+                <TableHead>SKU</TableHead>
+                <TableHead>Cena</TableHead>
+                <TableHead>Množstvo</TableHead>
+                <TableHead>Stav</TableHead>
+                <TableHead className="text-right">Akcie</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredProducts.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>{product.sku}</TableCell>
+                  <TableCell>€{product.price.toLocaleString('sk-SK', { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell>{product.total_quantity} ks</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      product.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {product.is_active ? 'Aktívny' : 'Neaktívny'}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          setEditingProduct(product)
+                          setFormData({
+                            name: product.name,
+                            description: product.description || '',
+                            price: product.price.toString(),
+                            sku: product.sku || '',
+                            is_active: product.is_active,
+                            image_url: product.image_url || ''
+                          })
+                        }}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleDeleteProduct(product.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upraviť produkt</DialogTitle>
+            <DialogDescription>
+              Upravte údaje o produkte. Všetky polia označené * sú povinné.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-name">Názov *</Label>
               <Input
-                id="vineyard"
-                value={formData.vineyard}
-                onChange={(e) => handleChange('vineyard', e.target.value)}
-                required
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               />
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Popis</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description">Popis</Label>
               <Textarea
-                id="description"
-                value={formData.description || ''}
-                onChange={(e) => handleChange('description', e.target.value)}
-                rows={4}
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               />
             </div>
-            
-            <div className="space-y-2">
-              <Label>Fotografie</Label>
-              <div className="grid grid-cols-4 gap-4">
-                {formData.images && formData.images.map((image, index) => (
-                  <div key={index} className="relative aspect-square rounded-md overflow-hidden">
-                    <Image 
-                      src={image.url} 
-                      alt={`Product image ${index + 1}`}
-                      fill
-                      className="object-cover"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-1 right-1 h-6 w-6 rounded-full"
-                      onClick={() => {
-                        const newImages = [...(Array.isArray(formData.images) ? formData.images : [])]
-                        newImages.splice(index, 1)
-                        setFormData({
-                          ...formData,
-                          images: newImages
-                        })
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-                <ImageUpload
-                  onUploadComplete={(urls) => handleImageUpload(urls[0])}
-                  maxFiles={1}
-                  bucket="images"
-                  folder="products"
-                />
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-price">Cena *</Label>
+              <Input
+                id="edit-price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.price}
+                onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-sku">SKU</Label>
+              <Input
+                id="edit-sku"
+                value={formData.sku}
+                onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-image_url">URL obrázka</Label>
+              <Input
+                id="edit-image_url"
+                value={formData.image_url}
+                onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => setEditingProduct(null)}>
               Zrušiť
             </Button>
-            <Button type="submit">
-              {wine ? 'Uložiť zmeny' : 'Pridať produkt'}
+            <Button onClick={handleUpdateProduct}>
+              Uložiť zmeny
             </Button>
           </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

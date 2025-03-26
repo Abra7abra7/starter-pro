@@ -1,24 +1,10 @@
 "use client"
 
-import { useState } from 'react'
-import { 
-  Search, 
-  Plus, 
-  Edit, 
-  Trash2,
-  Mail,
-  Phone,
-  ShoppingBag
-} from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Eye, Mail, Phone, MapPin } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -31,575 +17,396 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { createClient } from '@/utils/supabase/client'
 
-// Define interfaces for customer data
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  createdAt: string;
-  lastOrder: string | null;
-  totalOrders: number;
-  totalSpent: number;
-  notes: string;
-  status: string;
-}
-
-interface OrderItem {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-}
+// Initialize Supabase client
+const supabase = createClient()
 
 interface Order {
-  id: string;
-  customerId: string;
-  orderNumber: string;
-  date: string;
-  status: string;
-  total: number;
-  items: OrderItem[];
+  id: string
+  created_at: string
+  order_status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  total: number
 }
 
-// Mock data for customers
-const mockCustomers: Customer[] = [
-  {
-    id: '1',
-    name: 'Ján Novák',
-    email: 'jan.novak@example.com',
-    phone: '+421 900 123 456',
-    address: 'Hlavná 123, 811 01 Bratislava',
-    createdAt: '2024-12-15T10:30:00Z',
-    lastOrder: '2025-03-15T14:45:00Z',
-    totalOrders: 5,
-    totalSpent: 235.50,
-    notes: 'Preferuje červené vína, najmä Cabernet Sauvignon',
-    status: 'active'
-  },
-  {
-    id: '2',
-    name: 'Eva Kováčová',
-    email: 'eva.kovacova@example.com',
-    phone: '+421 900 234 567',
-    address: 'Mlynská 45, 040 01 Košice',
-    createdAt: '2025-01-10T09:15:00Z',
-    lastOrder: '2025-03-18T11:20:00Z',
-    totalOrders: 3,
-    totalSpent: 127.80,
-    notes: 'Členka vinárskeho klubu, má záujem o degustácie',
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'Peter Horváth',
-    email: 'peter.horvath@example.com',
-    phone: '+421 900 345 678',
-    address: 'Záhradnícka 78, 917 01 Trnava',
-    createdAt: '2025-02-05T16:40:00Z',
-    lastOrder: '2025-02-28T13:10:00Z',
-    totalOrders: 1,
-    totalSpent: 42.90,
-    notes: '',
-    status: 'active'
-  },
-  {
-    id: '4',
-    name: 'Mária Tóthová',
-    email: 'maria.tothova@example.com',
-    phone: '+421 900 456 789',
-    address: 'Jánošíkova 12, 010 01 Žilina',
-    createdAt: '2024-11-20T13:50:00Z',
-    lastOrder: '2025-01-05T10:25:00Z',
-    totalOrders: 2,
-    totalSpent: 89.70,
-    notes: 'Preferuje biele vína',
-    status: 'inactive'
-  },
-  {
-    id: '5',
-    name: 'Juraj Kováč',
-    email: 'juraj.kovac@example.com',
-    phone: '+421 900 567 890',
-    address: 'Námestie SNP 15, 974 01 Banská Bystrica',
-    createdAt: '2025-03-01T11:05:00Z',
-    lastOrder: null,
-    totalOrders: 0,
-    totalSpent: 0,
-    notes: 'Registrovaný na degustáciu 15.4.2025',
-    status: 'active'
-  }
-]
+// Types for customer data
+interface CustomerProfile {
+  first_name: string
+  last_name: string
+  phone: string
+}
 
-// Mock data for orders
-const mockOrders: Order[] = [
-  {
-    id: '1001',
-    customerId: '1',
-    orderNumber: 'ORD-2025-001',
-    date: '2025-03-15T14:45:00Z',
-    status: 'completed',
-    total: 75.80,
-    items: [
-      { id: '1', name: 'Cabernet Sauvignon 2022', quantity: 2, price: 18.90 },
-      { id: '3', name: 'Frankovka Modrá 2021', quantity: 2, price: 19.00 }
-    ]
-  },
-  {
-    id: '1002',
-    customerId: '2',
-    orderNumber: 'ORD-2025-002',
-    date: '2025-03-18T11:20:00Z',
-    status: 'completed',
-    total: 56.70,
-    items: [
-      { id: '2', name: 'Chardonnay 2023', quantity: 3, price: 18.90 }
-    ]
-  },
-  {
-    id: '1003',
-    customerId: '1',
-    orderNumber: 'ORD-2025-003',
-    date: '2025-03-10T09:30:00Z',
-    status: 'completed',
-    total: 37.80,
-    items: [
-      { id: '4', name: 'Rizling Rýnsky 2022', quantity: 2, price: 18.90 }
-    ]
-  },
-  {
-    id: '1004',
-    customerId: '3',
-    orderNumber: 'ORD-2025-004',
-    date: '2025-02-28T13:10:00Z',
-    status: 'completed',
-    total: 42.90,
-    items: [
-      { id: '6', name: 'Tramín Červený 2023', quantity: 3, price: 14.30 }
-    ]
-  },
-  {
-    id: '1005',
-    customerId: '1',
-    orderNumber: 'ORD-2025-005',
-    date: '2025-02-20T16:15:00Z',
-    status: 'completed',
-    total: 56.70,
-    items: [
-      { id: '2', name: 'Chardonnay 2023', quantity: 3, price: 18.90 }
-    ]
-  }
-]
+interface CustomerAddress {
+  street_address: string
+  apartment: string | null
+  city: string
+  postal_code: string
+  country: string
+  is_default: boolean
+}
+
+// Type for raw data from Supabase
+type RawCustomerData = {
+  id: string
+  email: string
+  created_at: string
+  customer_profiles: CustomerProfile[]
+  customer_addresses: CustomerAddress[]
+  orders: Order[]
+}
+
+interface Customer {
+  id: string
+  name: string
+  email: string
+  phone: string
+  address: string
+  created_at: string
+  orders: Order[]
+  total_orders: number
+  total_spent: number
+}
+
+const ORDER_STATUSES = {
+  pending: { label: 'Čaká na spracovanie', color: 'bg-yellow-100 text-yellow-800' },
+  processing: { label: 'Spracováva sa', color: 'bg-blue-100 text-blue-800' },
+  shipped: { label: 'Odoslané', color: 'bg-purple-100 text-purple-800' },
+  delivered: { label: 'Doručené', color: 'bg-green-100 text-green-800' },
+  cancelled: { label: 'Zrušené', color: 'bg-red-100 text-red-800' }
+}
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>(mockCustomers)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [openDialog, setOpenDialog] = useState(false)
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
-  
-  const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = 
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = 
-      statusFilter === 'all' || 
-      customer.status === statusFilter
-    
-    return matchesSearch && matchesStatus
-  })
-  
-  const handleAddCustomer = () => {
-    setSelectedCustomer(null)
-    setOpenDialog(true)
-  }
-  
-  const handleEditCustomer = (customer: Customer) => {
-    setSelectedCustomer(customer)
-    setOpenDialog(true)
-  }
-  
-  const handleDeleteCustomer = (id: string) => {
-    if (confirm('Naozaj chcete vymazať tohto zákazníka?')) {
-      setCustomers(customers.filter(customer => customer.id !== id))
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
+
+  // Subscribe to real-time changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('customers_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'customers'
+        },
+        () => {
+          fetchCustomers() // Refresh data when changes occur
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
     }
-  }
-  
-  const handleSaveCustomer = (formData: Customer) => {
-    if (selectedCustomer) {
-      // Update existing customer
-      setCustomers(customers.map(customer => 
-        customer.id === selectedCustomer.id ? { ...customer, ...formData } : customer
-      ))
-    } else {
-      // Add new customer
-      const newCustomer: Customer = {
-        ...formData,
-        id: `${customers.length + 1}`,
-        createdAt: new Date().toISOString(),
-        lastOrder: null,
-        totalOrders: 0,
-        totalSpent: 0
+  }, [])
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchCustomers()
+  }, [])
+
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true)
+      const { data: customers, error: supabaseError } = await supabase
+        .from('customers')
+        .select(`
+          id,
+          email,
+          created_at,
+          customer_profiles!inner (
+            first_name,
+            last_name,
+            phone
+          ),
+          customer_addresses!inner (
+            street_address,
+            apartment,
+            city,
+            postal_code,
+            country,
+            is_default
+          ),
+          orders (
+            id,
+            created_at,
+            order_status,
+            total
+          )
+        `)
+        .order('email')
+
+      if (supabaseError) throw supabaseError
+
+      if (!customers) {
+        throw new Error('No customers data received')
       }
-      setCustomers([...customers, newCustomer])
+
+      // Process customer data to include total orders and total spent
+      const processedCustomers: Customer[] = customers.map((customer: RawCustomerData) => {
+        const profile = customer.customer_profiles[0]
+        const address = customer.customer_addresses[0]
+
+        if (!profile || !address) {
+          throw new Error(`Missing profile or address data for customer ${customer.id}`)
+        }
+
+        return {
+          id: customer.id,
+          name: `${profile.first_name} ${profile.last_name}`,
+          email: customer.email,
+          phone: profile.phone,
+          address: `${address.street_address}${address.apartment ? `, ${address.apartment}` : ''}, ${address.city}, ${address.postal_code}, ${address.country}`,
+          created_at: customer.created_at,
+          orders: customer.orders.map(order => ({
+            id: order.id,
+            created_at: order.created_at,
+            order_status: order.order_status,
+            total: order.total
+          })),
+          total_orders: customer.orders.length,
+          total_spent: customer.orders.reduce((sum: number, order: Order) => sum + (order.total || 0), 0)
+        }
+      })
+
+      setCustomers(processedCustomers)
+    } catch (error) {
+      console.error('Error fetching customers:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while fetching customers')
+    } finally {
+      setLoading(false)
     }
-    setOpenDialog(false)
   }
-  
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '-'
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('sk-SK', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(date)
+
+  const filteredCustomers = customers.filter(customer =>
+    customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    customer.phone.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-[80vh]">Načítavam...</div>
   }
-  
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('sk-SK', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount)
+
+  if (error) {
+    return (
+      <div className="p-4 text-red-500">
+        <h2 className="text-lg font-bold">Error:</h2>
+        <p>{error}</p>
+        <Button onClick={fetchCustomers} className="mt-4">Retry</Button>
+      </div>
+    )
   }
-  
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Zákazníci</h1>
-        <Button onClick={handleAddCustomer} className="flex items-center gap-1">
-          <Plus className="h-4 w-4" />
-          Pridať zákazníka
-        </Button>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Celkový počet zákazníkov
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{customers.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Aktívni zákazníci
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {customers.filter(customer => customer.status === 'active').length}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Priemerná hodnota objednávky
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(mockOrders.reduce((acc, order) => acc + order.total, 0) / mockOrders.length)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Zoznam zákazníkov</CardTitle>
           <CardDescription>
-            Správa všetkých zákazníkov vášho vinárstva
+            Správa všetkých zákazníkov v systéme
           </CardDescription>
+          <div className="flex items-center space-x-2">
+            <Search className="w-4 h-4 text-gray-500" />
+            <Input
+              placeholder="Hľadať podľa mena, emailu alebo telefónu..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Vyhľadať zákazníka..."
-                className="pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Select
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Stav zákazníka" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Všetci zákazníci</SelectItem>
-                <SelectItem value="active">Aktívni</SelectItem>
-                <SelectItem value="inactive">Neaktívni</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Zákazník</TableHead>
-                  <TableHead>Kontakt</TableHead>
-                  <TableHead>Registrácia</TableHead>
-                  <TableHead>Posledná objednávka</TableHead>
-                  <TableHead>Celkové nákupy</TableHead>
-                  <TableHead className="text-right">Akcie</TableHead>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Meno</TableHead>
+                <TableHead>Kontakt</TableHead>
+                <TableHead>Počet objednávok</TableHead>
+                <TableHead>Celková hodnota</TableHead>
+                <TableHead>Registrovaný</TableHead>
+                <TableHead>Akcie</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredCustomers.map((customer) => (
+                <TableRow key={customer.id}>
+                  <TableCell className="font-medium">{customer.name}</TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Mail className="w-4 h-4 mr-2" />
+                        {customer.email}
+                      </div>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Phone className="w-4 h-4 mr-2" />
+                        {customer.phone}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{customer.total_orders}</TableCell>
+                  <TableCell>€{customer.total_spent.toLocaleString('sk-SK', { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell>
+                    {new Date(customer.created_at).toLocaleDateString('sk-SK', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedCustomer(customer)
+                        setIsDetailsDialogOpen(true)
+                      }}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCustomers.length > 0 ? (
-                  filteredCustomers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarFallback>{customer.name.split(' ').map(part => part[0]).join('').toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div>{customer.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {customer.status === 'active' ? (
-                                <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                                  Aktívny
-                                </Badge>
-                              ) : (
-                                <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
-                                  Neaktívny
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center text-sm">
-                            <Mail className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                            <span>{customer.email}</span>
-                          </div>
-                          <div className="flex items-center text-sm">
-                            <Phone className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                            <span>{customer.phone}</span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{formatDate(customer.createdAt)}</TableCell>
-                      <TableCell>{formatDate(customer.lastOrder)}</TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center text-sm">
-                            <ShoppingBag className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                            <span>{customer.totalOrders} objednávok</span>
-                          </div>
-                          <div className="font-medium">
-                            {formatCurrency(customer.totalSpent)}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditCustomer(customer)}
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Upraviť</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteCustomer(customer.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Odstrániť</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                      Nenašli sa žiadni zákazníci
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
-      
-      <CustomerDialog 
-        open={openDialog} 
-        onOpenChange={setOpenDialog}
-        customer={selectedCustomer}
-        onSave={handleSaveCustomer}
-      />
-    </div>
-  )
-}
 
-function CustomerDialog({ 
-  open, 
-  onOpenChange, 
-  customer, 
-  onSave 
-}: { 
-  open: boolean, 
-  onOpenChange: (open: boolean) => void, 
-  customer: Customer | null,
-  onSave: (formData: Customer) => void
-}) {
-  const [formData, setFormData] = useState<Partial<Customer>>({
-    id: customer?.id || '',
-    name: customer?.name || '',
-    email: customer?.email || '',
-    phone: customer?.phone || '',
-    address: customer?.address || '',
-    notes: customer?.notes || '',
-    status: customer?.status || 'active',
-    createdAt: customer?.createdAt || '',
-    lastOrder: customer?.lastOrder || null,
-    totalOrders: customer?.totalOrders || 0,
-    totalSpent: customer?.totalSpent || 0
-  })
-  
-  const handleChange = (field: keyof Customer, value: string | number) => {
-    setFormData({
-      ...formData,
-      [field]: value
-    })
-  }
-  
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSave(formData as Customer)
-  }
-  
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <form onSubmit={handleSubmit}>
+      {/* Customer Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{customer ? 'Upraviť zákazníka' : 'Pridať zákazníka'}</DialogTitle>
+            <DialogTitle>Detail zákazníka</DialogTitle>
             <DialogDescription>
-              {customer 
-                ? 'Upravte údaje existujúceho zákazníka' 
-                : 'Vyplňte formulár pre pridanie nového zákazníka'}
+              Kompletné informácie o zákazníkovi a jeho objednávkach
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Meno a priezvisko</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                required
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                  required
-                />
+          {selectedCustomer && (
+            <div className="grid gap-6">
+              {/* Customer Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Informácie o zákazníkovi</h3>
+                <div className="grid gap-4">
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-muted-foreground">Meno</div>
+                    <div className="font-medium">{selectedCustomer.name}</div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-muted-foreground">Email</div>
+                    <div className="font-medium flex items-center">
+                      <Mail className="w-4 h-4 mr-2" />
+                      {selectedCustomer.email}
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-muted-foreground">Telefón</div>
+                    <div className="font-medium flex items-center">
+                      <Phone className="w-4 h-4 mr-2" />
+                      {selectedCustomer.phone}
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-muted-foreground">Adresa</div>
+                    <div className="font-medium flex items-center">
+                      <MapPin className="w-4 h-4 mr-2" />
+                      {selectedCustomer.address}
+                    </div>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-32 text-sm text-muted-foreground">Registrovaný</div>
+                    <div className="font-medium">
+                      {new Date(selectedCustomer.created_at).toLocaleDateString('sk-SK', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="phone">Telefón</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => handleChange('phone', e.target.value)}
-                />
+
+              {/* Order History */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">História objednávok</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Číslo objednávky</TableHead>
+                      <TableHead>Dátum</TableHead>
+                      <TableHead>Suma</TableHead>
+                      <TableHead>Stav</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedCustomer.orders
+                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                      .map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">{order.id}</TableCell>
+                          <TableCell>
+                            {new Date(order.created_at).toLocaleDateString('sk-SK', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </TableCell>
+                          <TableCell>€{order.total.toLocaleString('sk-SK', { minimumFractionDigits: 2 })}</TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs ${ORDER_STATUSES[order.order_status].color}`}>
+                              {ORDER_STATUSES[order.order_status].label}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Customer Statistics */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Celkový počet objednávok
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {selectedCustomer.total_orders}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium">
+                      Celková hodnota objednávok
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      €{selectedCustomer.total_spent.toLocaleString('sk-SK', { minimumFractionDigits: 2 })}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="address">Adresa</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => handleChange('address', e.target.value)}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="notes">Poznámky</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => handleChange('notes', e.target.value)}
-                rows={3}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="status">Stav zákazníka</Label>
-              <Select 
-                value={formData.status} 
-                onValueChange={(value) => handleChange('status', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Vyberte stav zákazníka" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Aktívny</SelectItem>
-                  <SelectItem value="inactive">Neaktívny</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Zrušiť
-            </Button>
-            <Button type="submit">
-              {customer ? 'Uložiť zmeny' : 'Pridať zákazníka'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

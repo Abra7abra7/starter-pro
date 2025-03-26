@@ -1,23 +1,10 @@
 "use client"
 
-import { useState } from 'react'
-import { 
-  Search, 
-  Plus, 
-  ArrowUpRight,
-  ArrowDownRight,
-  Package,
-  RefreshCw
-} from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -34,615 +21,362 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
+import { createClient } from '@/utils/supabase/client'
 
-// Define interfaces for inventory items
-interface InventoryItem {
-  id: string;
-  productId: string;
-  productName: string;
-  category: string;
-  quantity: number;
-  minStockLevel: number;
-  maxStockLevel: number;
-  warehouseId: string;
-  warehouseName: string;
-  batchNumber: string;
-  expirationDate: string;
-  lastStockCheck: string;
+// Initialize Supabase client
+const supabase = createClient()
+
+interface Product {
+  id: string
+  name: string
+  price: string
+  sku: string | null
 }
 
 interface Warehouse {
-  id: string;
-  name: string;
-  location: string;
+  id: string
+  name: string
+  location: string
 }
 
-interface Transaction {
-  id: string;
-  inventoryId: string;
-  productName: string;
-  transactionType: string;
-  quantity: number;
-  date: string;
-  performedBy: string;
-  notes: string;
+interface InventoryItem {
+  id: string
+  product_id: string
+  warehouse_id: string
+  quantity: number
+  min_stock_level: number
+  max_stock_level: number
+  product: Product
+  warehouse: Warehouse
 }
 
-// Mock data - would be replaced with real data from Supabase
-const mockInventory: InventoryItem[] = [
-  {
-    id: '1',
-    productId: '1',
-    productName: 'Cabernet Sauvignon 2022',
-    category: 'Červené',
-    quantity: 42,
-    minStockLevel: 10,
-    maxStockLevel: 100,
-    warehouseId: '1',
-    warehouseName: 'Hlavný sklad',
-    batchNumber: 'BATCH-2022-001',
-    expirationDate: '2027-03-25',
-    lastStockCheck: '2025-03-20T10:00:00Z'
-  },
-  {
-    id: '2',
-    productId: '2',
-    productName: 'Chardonnay 2023',
-    category: 'Biele',
-    quantity: 28,
-    minStockLevel: 10,
-    maxStockLevel: 100,
-    warehouseId: '1',
-    warehouseName: 'Hlavný sklad',
-    batchNumber: 'BATCH-2023-001',
-    expirationDate: '2026-03-25',
-    lastStockCheck: '2025-03-20T10:00:00Z'
-  },
-  {
-    id: '3',
-    productId: '3',
-    productName: 'Frankovka Modrá 2021',
-    category: 'Červené',
-    quantity: 15,
-    minStockLevel: 10,
-    maxStockLevel: 100,
-    warehouseId: '1',
-    warehouseName: 'Hlavný sklad',
-    batchNumber: 'BATCH-2021-001',
-    expirationDate: '2028-03-25',
-    lastStockCheck: '2025-03-20T10:00:00Z'
-  },
-  {
-    id: '4',
-    productId: '4',
-    productName: 'Rizling Rýnsky 2022',
-    category: 'Biele',
-    quantity: 33,
-    minStockLevel: 10,
-    maxStockLevel: 100,
-    warehouseId: '1',
-    warehouseName: 'Hlavný sklad',
-    batchNumber: 'BATCH-2022-002',
-    expirationDate: '2027-03-25',
-    lastStockCheck: '2025-03-20T10:00:00Z'
-  },
-  {
-    id: '5',
-    productId: '5',
-    productName: 'Svätovavrinecké 2020',
-    category: 'Červené',
-    quantity: 5,
-    minStockLevel: 10,
-    maxStockLevel: 100,
-    warehouseId: '1',
-    warehouseName: 'Hlavný sklad',
-    batchNumber: 'BATCH-2020-001',
-    expirationDate: '2029-03-25',
-    lastStockCheck: '2025-03-20T10:00:00Z'
-  },
-  {
-    id: '6',
-    productId: '6',
-    productName: 'Tramín Červený 2023',
-    category: 'Biele',
-    quantity: 0,
-    minStockLevel: 10,
-    maxStockLevel: 100,
-    warehouseId: '1',
-    warehouseName: 'Hlavný sklad',
-    batchNumber: 'BATCH-2023-002',
-    expirationDate: '2026-03-25',
-    lastStockCheck: '2025-03-20T10:00:00Z'
-  },
-]
-
-const mockWarehouses: Warehouse[] = [
-  { id: '1', name: 'Hlavný sklad', location: 'Bratislava' },
-  { id: '2', name: 'Sklad Košice', location: 'Košice' },
-  { id: '3', name: 'Predajňa Bratislava', location: 'Bratislava' }
-]
-
-const mockTransactions: Transaction[] = [
-  {
-    id: '1',
-    inventoryId: '1',
-    productName: 'Cabernet Sauvignon 2022',
-    transactionType: 'received',
-    quantity: 50,
-    date: '2025-03-15T09:30:00Z',
-    performedBy: 'Ján Novák',
-    notes: 'Nová dodávka'
-  },
-  {
-    id: '2',
-    inventoryId: '1',
-    productName: 'Cabernet Sauvignon 2022',
-    transactionType: 'shipped',
-    quantity: -8,
-    date: '2025-03-18T14:45:00Z',
-    performedBy: 'Eva Kováčová',
-    notes: 'Objednávka #1001'
-  },
-  {
-    id: '3',
-    inventoryId: '5',
-    productName: 'Svätovavrinecké 2020',
-    transactionType: 'adjusted',
-    quantity: -2,
-    date: '2025-03-19T11:20:00Z',
-    performedBy: 'Peter Horváth',
-    notes: 'Inventúrny rozdiel'
-  },
-  {
-    id: '4',
-    inventoryId: '2',
-    productName: 'Chardonnay 2023',
-    transactionType: 'transferred',
-    quantity: -10,
-    date: '2025-03-20T10:15:00Z',
-    performedBy: 'Mária Tóthová',
-    notes: 'Presun do predajne Bratislava'
-  },
-  {
-    id: '5',
-    inventoryId: '6',
-    productName: 'Tramín Červený 2023',
-    transactionType: 'shipped',
-    quantity: -15,
-    date: '2025-03-22T16:30:00Z',
-    performedBy: 'Eva Kováčová',
-    notes: 'Objednávka #1004'
-  }
-]
+interface StockMovementFormData {
+  product_id: string
+  warehouse_id: string
+  quantity: number
+  type: 'in' | 'out'
+}
 
 export default function InventoryPage() {
-  const [inventory, setInventory] = useState<InventoryItem[]>(mockInventory)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [warehouseFilter, setWarehouseFilter] = useState('all')
-  const [stockFilter, setStockFilter] = useState('all')
-  const [openDialog, setOpenDialog] = useState(false)
-  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null)
-  const [activeTab, setActiveTab] = useState('inventory')
-  
-  const filteredInventory = inventory.filter(item => {
-    const matchesSearch = 
-      item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.batchNumber.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesWarehouse = 
-      warehouseFilter === 'all' || 
-      item.warehouseId === warehouseFilter
-    
-    const matchesStock = 
-      stockFilter === 'all' || 
-      (stockFilter === 'low' && item.quantity <= item.minStockLevel) ||
-      (stockFilter === 'out' && item.quantity === 0) ||
-      (stockFilter === 'normal' && item.quantity > item.minStockLevel)
-    
-    return matchesSearch && matchesWarehouse && matchesStock
+  const [inventory, setInventory] = useState<InventoryItem[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false)
+  const [movementFormData, setMovementFormData] = useState<StockMovementFormData>({
+    product_id: '',
+    warehouse_id: '',
+    quantity: 0,
+    type: 'in'
   })
-  
-  const handleAdjustStock = (item: InventoryItem) => {
-    setSelectedItem(item)
-    setOpenDialog(true)
-  }
-  
-  const handleStockUpdate = (id: string, newQuantity: number) => {
-    setInventory(inventory.map(item => 
-      item.id === id ? { ...item, quantity: newQuantity } : item
-    ))
-    setOpenDialog(false)
-  }
-  
-  const getStockStatus = (item: InventoryItem) => {
-    if (item.quantity === 0) {
-      return (
-        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
-          Vypredané
-        </Badge>
+
+  // Subscribe to real-time changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('inventory_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'inventory'
+        },
+        () => {
+          fetchInventory() // Refresh data when changes occur
+        }
       )
-    } else if (item.quantity <= item.minStockLevel) {
-      return (
-        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-          Nízky stav: {item.quantity}
-        </Badge>
-      )
-    } else {
-      return (
-        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-          Na sklade: {item.quantity}
-        </Badge>
-      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchInventory()
+    fetchProducts()
+    fetchWarehouses()
+  }, [])
+
+  const fetchInventory = async () => {
+    try {
+      setLoading(true)
+      const { data: inventory, error: supabaseError } = await supabase
+        .from('inventory')
+        .select(`
+          *,
+          product:products(*),
+          warehouse:warehouses(*)
+        `)
+        .order('product_id')
+
+      if (supabaseError) throw supabaseError
+
+      setInventory(inventory)
+    } catch (error) {
+      console.error('Error fetching inventory:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while fetching inventory')
+    } finally {
+      setLoading(false)
     }
   }
-  
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('sk-SK', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(date)
-  }
-  
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return new Intl.DateTimeFormat('sk-SK', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date)
-  }
-  
-  const getTransactionTypeBadge = (type: string) => {
-    switch (type) {
-      case 'received':
-        return (
-          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-            <ArrowUpRight className="h-3 w-3 mr-1" />
-            Príjem
-          </Badge>
-        )
-      case 'shipped':
-        return (
-          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            <ArrowDownRight className="h-3 w-3 mr-1" />
-            Výdaj
-          </Badge>
-        )
-      case 'adjusted':
-        return (
-          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
-            <RefreshCw className="h-3 w-3 mr-1" />
-            Úprava
-          </Badge>
-        )
-      case 'transferred':
-        return (
-          <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
-            <Package className="h-3 w-3 mr-1" />
-            Presun
-          </Badge>
-        )
-      default:
-        return (
-          <Badge>
-            {type}
-          </Badge>
-        )
+
+  const fetchProducts = async () => {
+    try {
+      const { data: products, error: supabaseError } = await supabase
+        .from('products')
+        .select('id, name, price, sku')
+        .order('name')
+
+      if (supabaseError) throw supabaseError
+
+      setProducts(products)
+    } catch (error) {
+      console.error('Error fetching products:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while fetching products')
     }
   }
-  
+
+  const fetchWarehouses = async () => {
+    try {
+      const { data: warehouses, error: supabaseError } = await supabase
+        .from('warehouses')
+        .select('*')
+        .order('name')
+
+      if (supabaseError) throw supabaseError
+
+      setWarehouses(warehouses)
+    } catch (error) {
+      console.error('Error fetching warehouses:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while fetching warehouses')
+    }
+  }
+
+  const handleStockMovement = async () => {
+    try {
+      // Find existing inventory record
+      const existingInventory = inventory.find(
+        item => item.product_id === movementFormData.product_id && 
+                item.warehouse_id === movementFormData.warehouse_id
+      )
+
+      const newQuantity = existingInventory
+        ? existingInventory.quantity + (movementFormData.type === 'in' ? movementFormData.quantity : -movementFormData.quantity)
+        : movementFormData.quantity
+
+      if (newQuantity < 0) {
+        throw new Error('Insufficient stock')
+      }
+
+      if (existingInventory) {
+        // Update existing inventory
+        const { error } = await supabase
+          .from('inventory')
+          .update({ quantity: newQuantity })
+          .eq('id', existingInventory.id)
+
+        if (error) throw error
+      } else {
+        // Create new inventory record
+        const { error } = await supabase
+          .from('inventory')
+          .insert([{
+            product_id: movementFormData.product_id,
+            warehouse_id: movementFormData.warehouse_id,
+            quantity: newQuantity,
+            min_stock_level: 5,
+            max_stock_level: 100
+          }])
+
+        if (error) throw error
+      }
+
+      setIsMovementDialogOpen(false)
+      setMovementFormData({
+        product_id: '',
+        warehouse_id: '',
+        quantity: 0,
+        type: 'in'
+      })
+      await fetchInventory()
+    } catch (error) {
+      console.error('Error updating inventory:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred while updating inventory')
+    }
+  }
+
+  const filteredInventory = inventory.filter(item =>
+    item.product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.product.sku?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.warehouse.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-[80vh]">Načítavam...</div>
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-red-500">
+        <h2 className="text-lg font-bold">Error:</h2>
+        <p>{error}</p>
+        <Button onClick={fetchInventory} className="mt-4">Retry</Button>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">Správa skladu</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex items-center gap-1">
-            <RefreshCw className="h-4 w-4" />
-            Inventúra
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">Sklad</h1>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => {
+            setMovementFormData({ ...movementFormData, type: 'out' })
+            setIsMovementDialogOpen(true)
+          }}>
+            <ArrowDownRight className="w-4 h-4 mr-2" />
+            Výdaj zo skladu
           </Button>
-          <Button className="flex items-center gap-1">
-            <Plus className="h-4 w-4" />
-            Nová transakcia
+          <Button onClick={() => {
+            setMovementFormData({ ...movementFormData, type: 'in' })
+            setIsMovementDialogOpen(true)
+          }}>
+            <ArrowUpRight className="w-4 h-4 mr-2" />
+            Príjem na sklad
           </Button>
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Celkový počet produktov
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{inventory.length}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Produkty s nízkym stavom
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
-              {inventory.filter(item => item.quantity > 0 && item.quantity <= item.minStockLevel).length}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Stav skladu</CardTitle>
+          <CardDescription>
+            Prehľad skladových zásob podľa produktov a skladov
+          </CardDescription>
+          <div className="flex items-center space-x-2">
+            <Search className="w-4 h-4 text-gray-500" />
+            <Input
+              placeholder="Hľadať podľa názvu produktu, SKU alebo skladu..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Produkt</TableHead>
+                <TableHead>SKU</TableHead>
+                <TableHead>Sklad</TableHead>
+                <TableHead>Množstvo</TableHead>
+                <TableHead>Min. zásoba</TableHead>
+                <TableHead>Max. zásoba</TableHead>
+                <TableHead>Stav</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredInventory.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">{item.product.name}</TableCell>
+                  <TableCell>{item.product.sku}</TableCell>
+                  <TableCell>{item.warehouse.name}</TableCell>
+                  <TableCell>{item.quantity} ks</TableCell>
+                  <TableCell>{item.min_stock_level} ks</TableCell>
+                  <TableCell>{item.max_stock_level} ks</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      item.quantity <= item.min_stock_level
+                        ? 'bg-red-100 text-red-800'
+                        : item.quantity >= item.max_stock_level
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {item.quantity <= item.min_stock_level
+                        ? 'Nízky stav'
+                        : item.quantity >= item.max_stock_level
+                        ? 'Nadmerný stav'
+                        : 'Optimálny stav'}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Stock Movement Dialog */}
+      <Dialog open={isMovementDialogOpen} onOpenChange={setIsMovementDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {movementFormData.type === 'in' ? 'Príjem na sklad' : 'Výdaj zo skladu'}
+            </DialogTitle>
+            <DialogDescription>
+              Vyplňte údaje o pohybe tovaru. Všetky polia sú povinné.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="product">Produkt</Label>
+              <select
+                id="product"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                value={movementFormData.product_id}
+                onChange={(e) => setMovementFormData(prev => ({ ...prev, product_id: e.target.value }))}
+              >
+                <option value="">Vyberte produkt</option>
+                {products.map(product => (
+                  <option key={product.id} value={product.id}>
+                    {product.name} ({product.sku || 'bez SKU'})
+                  </option>
+                ))}
+              </select>
             </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Vypredané produkty
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {inventory.filter(item => item.quantity === 0).length}
+            <div className="grid gap-2">
+              <Label htmlFor="warehouse">Sklad</Label>
+              <select
+                id="warehouse"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                value={movementFormData.warehouse_id}
+                onChange={(e) => setMovementFormData(prev => ({ ...prev, warehouse_id: e.target.value }))}
+              >
+                <option value="">Vyberte sklad</option>
+                {warehouses.map(warehouse => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name} ({warehouse.location})
+                  </option>
+                ))}
+              </select>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="inventory">Stav zásob</TabsTrigger>
-          <TabsTrigger value="transactions">História transakcií</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="inventory" className="space-y-4 pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Stav zásob</CardTitle>
-              <CardDescription>
-                Prehľad všetkých produktov na sklade
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Vyhľadať produkt..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <Select
-                  value={warehouseFilter}
-                  onValueChange={setWarehouseFilter}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Sklad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Všetky sklady</SelectItem>
-                    {mockWarehouses.map(warehouse => (
-                      <SelectItem key={warehouse.id} value={warehouse.id}>
-                        {warehouse.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={stockFilter}
-                  onValueChange={setStockFilter}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Stav zásob" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Všetky stavy</SelectItem>
-                    <SelectItem value="normal">Dostatočný stav</SelectItem>
-                    <SelectItem value="low">Nízky stav</SelectItem>
-                    <SelectItem value="out">Vypredané</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Produkt</TableHead>
-                      <TableHead>Sklad</TableHead>
-                      <TableHead>Šarža</TableHead>
-                      <TableHead>Stav zásob</TableHead>
-                      <TableHead>Využitie kapacity</TableHead>
-                      <TableHead className="text-right">Akcie</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredInventory.length > 0 ? (
-                      filteredInventory.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">
-                            <div>
-                              <div>{item.productName}</div>
-                              <div className="text-sm text-muted-foreground">{item.category}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{item.warehouseName}</TableCell>
-                          <TableCell>
-                            <div>
-                              <div>{item.batchNumber}</div>
-                              <div className="text-sm text-muted-foreground">
-                                Expirácia: {formatDate(item.expirationDate)}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{getStockStatus(item)}</TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              <Progress 
-                                value={(item.quantity / item.maxStockLevel) * 100} 
-                                className="h-2"
-                              />
-                              <p className="text-xs text-muted-foreground">
-                                {item.quantity} z {item.maxStockLevel} ({Math.round((item.quantity / item.maxStockLevel) * 100)}%)
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAdjustStock(item)}
-                            >
-                              Upraviť stav
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                          Nenašli sa žiadne položky
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="transactions" className="space-y-4 pt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>História transakcií</CardTitle>
-              <CardDescription>
-                Prehľad všetkých pohybov na sklade
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Dátum a čas</TableHead>
-                      <TableHead>Produkt</TableHead>
-                      <TableHead>Typ transakcie</TableHead>
-                      <TableHead>Množstvo</TableHead>
-                      <TableHead>Vykonal</TableHead>
-                      <TableHead>Poznámka</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mockTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell>
-                          {formatDateTime(transaction.date)}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {transaction.productName}
-                        </TableCell>
-                        <TableCell>
-                          {getTransactionTypeBadge(transaction.transactionType)}
-                        </TableCell>
-                        <TableCell className={transaction.quantity < 0 ? 'text-red-600' : 'text-green-600'}>
-                          {transaction.quantity > 0 ? `+${transaction.quantity}` : transaction.quantity}
-                        </TableCell>
-                        <TableCell>{transaction.performedBy}</TableCell>
-                        <TableCell>{transaction.notes}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-      
-      {selectedItem && (
-        <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Upraviť stav zásob</DialogTitle>
-              <DialogDescription>
-                Upravte aktuálny stav zásob pre produkt {selectedItem.productName}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="current-stock">Aktuálny stav</Label>
-                <Input
-                  id="current-stock"
-                  value={selectedItem.quantity}
-                  disabled
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="adjustment-type">Typ úpravy</Label>
-                <Select defaultValue="add">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Vyberte typ úpravy" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="add">Príjem na sklad</SelectItem>
-                    <SelectItem value="remove">Výdaj zo skladu</SelectItem>
-                    <SelectItem value="set">Nastaviť presnú hodnotu</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Množstvo</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="0"
-                  defaultValue="1"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="notes">Poznámka</Label>
-                <Input
-                  id="notes"
-                  placeholder="Dôvod úpravy stavu zásob"
-                />
-              </div>
+            <div className="grid gap-2">
+              <Label htmlFor="quantity">Množstvo</Label>
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                value={movementFormData.quantity}
+                onChange={(e) => setMovementFormData(prev => ({ ...prev, quantity: parseInt(e.target.value) }))}
+              />
             </div>
-            
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setOpenDialog(false)}>
-                Zrušiť
-              </Button>
-              <Button onClick={() => handleStockUpdate(selectedItem.id, selectedItem.quantity + 5)}>
-                Potvrdiť
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMovementDialogOpen(false)}>
+              Zrušiť
+            </Button>
+            <Button onClick={handleStockMovement}>
+              {movementFormData.type === 'in' ? 'Prijať na sklad' : 'Vydať zo skladu'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
