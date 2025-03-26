@@ -3,10 +3,10 @@ import { stripe } from '@/utils/stripe/config';
 import {
   upsertProductRecord,
   upsertPriceRecord,
-  manageSubscriptionStatusChange,
   deleteProductRecord,
   deletePriceRecord
 } from '@/utils/supabase/admin';
+import { createOrder, createOrUpdateCustomer } from '@/utils/supabase/orders';
 
 const relevantEvents = new Set([
   'product.created',
@@ -16,9 +16,8 @@ const relevantEvents = new Set([
   'price.updated',
   'price.deleted',
   'checkout.session.completed',
-  'customer.subscription.created',
-  'customer.subscription.updated',
-  'customer.subscription.deleted'
+  'payment_intent.succeeded',
+  'payment_intent.payment_failed'
 ]);
 
 export async function POST(req: Request) {
@@ -55,26 +54,22 @@ export async function POST(req: Request) {
         case 'product.deleted':
           await deleteProductRecord(event.data.object as Stripe.Product);
           break;
-        case 'customer.subscription.created':
-        case 'customer.subscription.updated':
-        case 'customer.subscription.deleted':
-          const subscription = event.data.object as Stripe.Subscription;
-          await manageSubscriptionStatusChange(
-            subscription.id,
-            subscription.customer as string,
-            event.type === 'customer.subscription.created'
-          );
-          break;
         case 'checkout.session.completed':
           const checkoutSession = event.data.object as Stripe.Checkout.Session;
-          if (checkoutSession.mode === 'subscription') {
-            const subscriptionId = checkoutSession.subscription;
-            await manageSubscriptionStatusChange(
-              subscriptionId as string,
-              checkoutSession.customer as string,
-              true
-            );
+          if (checkoutSession.mode === 'payment') {
+            // Create or update customer record
+            await createOrUpdateCustomer(checkoutSession);
+            // Create order record
+            await createOrder(checkoutSession);
           }
+          break;
+        case 'payment_intent.succeeded':
+          const paymentIntent = event.data.object as Stripe.PaymentIntent;
+          console.log(`PaymentIntent ${paymentIntent.id} succeeded`);
+          break;
+        case 'payment_intent.payment_failed':
+          const failedPaymentIntent = event.data.object as Stripe.PaymentIntent;
+          console.error(`PaymentIntent ${failedPaymentIntent.id} failed`);
           break;
         default:
           console.log(`Unhandled event type ${event.type}`);
