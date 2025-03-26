@@ -8,6 +8,33 @@
 -- 6. Warehouse and inventory management
 
 -- ======== WINE PRODUCTS ========
+-- Products table (base table for all products)
+CREATE TABLE IF NOT EXISTS "public"."products" (
+    "id" text NOT NULL DEFAULT gen_random_uuid()::text,
+    "name" text NOT NULL,
+    "description" text,
+    "price" decimal(10,2) NOT NULL,
+    "sku" text UNIQUE,
+    "is_active" boolean DEFAULT true,
+    "image_url" text,
+    "metadata" jsonb,
+    "created_at" timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+    PRIMARY KEY (id)
+);
+
+ALTER TABLE "public"."products" ENABLE ROW LEVEL SECURITY;
+
+-- Customers table (base table for customer management)
+CREATE TABLE IF NOT EXISTS "public"."customers" (
+    "id" text NOT NULL DEFAULT gen_random_uuid()::text,
+    "email" text NOT NULL UNIQUE,
+    "created_at" timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+    PRIMARY KEY (id)
+);
+
+ALTER TABLE "public"."customers" ENABLE ROW LEVEL SECURITY;
 
 -- Wine categories (red, white, rosé, sparkling, etc.)
 CREATE TABLE "public"."wine_categories" (
