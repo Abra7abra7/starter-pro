@@ -1,6 +1,6 @@
-import type { Tables } from '@/types/database.types';
+import type { Database } from '@/types/database.types';
 
-type Price = Tables<'prices'>;
+type Price = Database['public']['Tables']['products'];
 
 export const getURL = (path: string = '') => {
   // Check if NEXT_PUBLIC_SITE_URL is set and non-empty. Set this to your site URL in production env.
@@ -44,7 +44,7 @@ export const postData = async ({
 };
 
 export const toDateTime = (secs: number) => {
-  var t = new Date(+0); // Unix epoch start.
+  const t = new Date(+0); // Unix epoch start.
   t.setSeconds(secs);
   return t;
 };
