@@ -24,37 +24,86 @@ import {
   Pie,
   Cell
 } from 'recharts'
+import { createClient } from '@/utils/supabase/client'
 
-// Mock data - would be replaced with real data from Supabase
-const salesData = [
-  { name: 'Jan', total: 1500 },
-  { name: 'Feb', total: 2300 },
-  { name: 'Mar', total: 3200 },
-  { name: 'Apr', total: 4500 },
-  { name: 'May', total: 3800 },
-  { name: 'Jun', total: 5000 },
-]
+// Initialize Supabase client
+const supabase = createClient()
 
-const productPerformance = [
-  { name: 'Cabernet Sauvignon 2022', value: 35 },
-  { name: 'Chardonnay 2023', value: 25 },
-  { name: 'Frankovka Modrá 2021', value: 20 },
-  { name: 'Rizling Rýnsky 2022', value: 15 },
-  { name: 'Ostatné', value: 5 },
-]
+interface Product {
+  id: string
+  name: string
+  description: string | null
+  price: string
+  sku: string | null
+  is_active: boolean
+  image_url: string | null
+  metadata: any
+  created_at: string
+  updated_at: string
+  inventory: Array<{ quantity: number }>
+  quantity?: number
+}
 
-const COLORS = ['#B45309', '#D97706', '#F59E0B', '#FBBF24', '#FDE68A']
+interface DashboardData {
+  products: Product[]
+  totalValue: number
+  lowStock: Product[]
+}
 
 export default function AdminDashboard() {
   const [isClient, setIsClient] = useState(false)
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
+    products: [],
+    totalValue: 0,
+    lowStock: []
+  })
 
   useEffect(() => {
     setIsClient(true)
+    fetchDashboardData()
   }, [])
+
+  const fetchDashboardData = async () => {
+    try {
+      const { data: products, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          inventory:inventory(quantity)
+        `)
+        .order('name')
+
+      if (error) throw error
+
+      // Process the data
+      const processedData = (products as Product[]).map(product => ({
+        ...product,
+        quantity: product.inventory?.[0]?.quantity || 0
+      }))
+
+      // Calculate total inventory value
+      const totalValue = processedData.reduce((sum, product) => {
+        return sum + (parseFloat(product.price) * (product.quantity || 0))
+      }, 0)
+
+      // Identify low stock items (less than 20 units)
+      const lowStock = processedData.filter(product => (product.quantity || 0) < 20)
+
+      setDashboardData({
+        products: processedData,
+        totalValue,
+        lowStock
+      })
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+    }
+  }
 
   if (!isClient) {
     return <div className="flex justify-center items-center h-[80vh]">Načítavam...</div>
   }
+
+  const COLORS = ['#B45309', '#D97706', '#F59E0B', '#FBBF24', '#FDE68A']
 
   return (
     <div className="space-y-6">
@@ -62,7 +111,7 @@ export default function AdminDashboard() {
         <h1 className="text-3xl font-bold tracking-tight">Prehľad</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline">Exportovať</Button>
-          <Button>Obnoviť</Button>
+          <Button onClick={fetchDashboardData}>Obnoviť</Button>
         </div>
       </div>
 
@@ -71,18 +120,16 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Celkové tržby
+              Hodnota skladu
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€24,532</div>
-            <p className="text-xs text-muted-foreground flex items-center">
-              <span className="text-green-500 flex items-center mr-1">
-                <ArrowUpRight className="h-3 w-3 mr-1" />
-                +12.5%
-              </span>
-              oproti minulému mesiacu
+            <div className="text-2xl font-bold">
+              €{dashboardData.totalValue.toLocaleString('sk-SK', { maximumFractionDigits: 2 })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Celková hodnota produktov na sklade
             </p>
           </CardContent>
         </Card>
@@ -90,52 +137,46 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Objednávky
+              Produkty na sklade
             </CardTitle>
             <ShoppingBag className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">243</div>
-            <p className="text-xs text-muted-foreground flex items-center">
-              <span className="text-green-500 flex items-center mr-1">
-                <ArrowUpRight className="h-3 w-3 mr-1" />
-                +8.2%
-              </span>
-              oproti minulému mesiacu
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Zákazníci
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1,452</div>
-            <p className="text-xs text-muted-foreground flex items-center">
-              <span className="text-green-500 flex items-center mr-1">
-                <ArrowUpRight className="h-3 w-3 mr-1" />
-                +5.3%
-              </span>
-              oproti minulému mesiacu
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Nadchádzajúce degustácie
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{dashboardData.products.length}</div>
             <p className="text-xs text-muted-foreground">
-              Najbližšia: 15. apríla 2025
+              Počet rôznych produktov v ponuke
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Nízky stav zásob
+            </CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardData.lowStock.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Produkty s menej ako 20 kusmi
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Priemerná cena
+            </CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              €{(dashboardData.totalValue / Math.max(1, dashboardData.products.length)).toLocaleString('sk-SK', { maximumFractionDigits: 2 })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Priemerná cena za produkt
             </p>
           </CardContent>
         </Card>
@@ -145,22 +186,22 @@ export default function AdminDashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="col-span-1">
           <CardHeader>
-            <CardTitle>Mesačné tržby</CardTitle>
+            <CardTitle>Stav zásob podľa produktov</CardTitle>
             <CardDescription>
-              Prehľad tržieb za posledných 6 mesiacov
+              Aktuálny stav jednotlivých produktov na sklade
             </CardDescription>
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={salesData}>
+              <BarChart data={dashboardData.products}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip 
-                  formatter={(value) => [`€${value}`, 'Tržby']}
-                  labelFormatter={(label) => `Mesiac: ${label}`}
+                  formatter={(value) => [`${value} ks`, 'Množstvo']}
+                  labelFormatter={(label) => `Produkt: ${label}`}
                 />
-                <Bar dataKey="total" fill="#B45309" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="quantity" fill="#B45309" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -168,62 +209,63 @@ export default function AdminDashboard() {
 
         <Card className="col-span-1">
           <CardHeader>
-            <CardTitle>Najlepšie predávané produkty</CardTitle>
+            <CardTitle>Rozloženie zásob</CardTitle>
             <CardDescription>
-              Podiel na celkových tržbách
+              Percentuálny podiel produktov na celkovom množstve
             </CardDescription>
           </CardHeader>
           <CardContent className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={productPerformance}
+                  data={dashboardData.products}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, quantity, percent }) => 
+                    `${name}: ${quantity} ks (${(percent * 100).toFixed(0)}%)`
+                  }
                   outerRadius={80}
                   fill="#8884d8"
-                  dataKey="value"
+                  dataKey="quantity"
                 >
-                  {productPerformance.map((entry, index) => (
+                  {dashboardData.products.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [`${value}%`, 'Podiel']} />
+                <Tooltip formatter={(value) => [`${value} ks`, 'Množstvo']} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent activity and alerts */}
+      {/* Inventory details and alerts */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="col-span-1">
           <CardHeader>
-            <CardTitle>Nedávne objednávky</CardTitle>
+            <CardTitle>Stav produktov</CardTitle>
             <CardDescription>
-              Posledných 5 objednávok
+              Detailný prehľad všetkých produktov
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
+              {dashboardData.products.map((product, i) => (
                 <div key={i} className="flex items-center justify-between border-b pb-2">
                   <div>
-                    <p className="font-medium">ORD-20250325-{1000 + i}</p>
-                    <p className="text-sm text-muted-foreground">Zákazník: Ján Novák</p>
+                    <p className="font-medium">{product.name}</p>
+                    <p className="text-sm text-muted-foreground">Skladom: {product.quantity} ks</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">€{(Math.random() * 200 + 50).toFixed(2)}</p>
-                    <p className="text-sm text-muted-foreground">Pred {i + 1} {i === 0 ? 'hodinou' : 'hodinami'}</p>
+                    <p className="font-medium">€{parseFloat(product.price).toLocaleString('sk-SK', { minimumFractionDigits: 2 })}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Hodnota: €{(parseFloat(product.price) * (product.quantity || 0)).toLocaleString('sk-SK', { minimumFractionDigits: 2 })}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
-            <Button variant="outline" className="w-full mt-4">
-              Zobraziť všetky objednávky
-            </Button>
           </CardContent>
         </Card>
 
@@ -231,42 +273,28 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle>Upozornenia</CardTitle>
             <CardDescription>
-              Dôležité upozornenia vyžadujúce pozornosť
+              Produkty s nízkym stavom zásob
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-start gap-4 border-b pb-4">
-                <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
-                <div>
-                  <p className="font-medium">Nízky stav zásob</p>
-                  <p className="text-sm text-muted-foreground">
-                    Cabernet Sauvignon 2022 - zostáva len 5 fliaš
-                  </p>
+              {dashboardData.lowStock.map((product, i) => (
+                <div key={i} className="flex items-start gap-4 border-b pb-4">
+                  <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5" />
+                  <div>
+                    <p className="font-medium">{product.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Zostáva len {product.quantity} fliaš
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-4 border-b pb-4">
-                <Package className="h-5 w-5 text-amber-500 mt-0.5" />
-                <div>
-                  <p className="font-medium">Čakajúce zásielky</p>
-                  <p className="text-sm text-muted-foreground">
-                    3 objednávky čakajú na odoslanie
-                  </p>
+              ))}
+              {dashboardData.lowStock.length === 0 && (
+                <div className="text-center text-muted-foreground py-4">
+                  Žiadne produkty nemajú kriticky nízky stav zásob
                 </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <Calendar className="h-5 w-5 text-amber-500 mt-0.5" />
-                <div>
-                  <p className="font-medium">Nadchádzajúca degustácia</p>
-                  <p className="text-sm text-muted-foreground">
-                    &quot;Jarná degustácia&quot; - 15. apríla 2025, 18:00
-                  </p>
-                </div>
-              </div>
+              )}
             </div>
-            <Button variant="outline" className="w-full mt-4">
-              Zobraziť všetky upozornenia
-            </Button>
           </CardContent>
         </Card>
       </div>
