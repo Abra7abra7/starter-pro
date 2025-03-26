@@ -16,6 +16,7 @@ const Navigation = () => {
     { href: '/', label: 'Domov' },
     { href: '/eshop', label: 'E-shop' },
     { href: '/degustacia', label: 'Degustácie' },
+    { href: '/ubytovanie', label: 'Ubytovanie' },
     { href: '/o-nas', label: 'O nás' },
     { href: '/kontakt', label: 'Kontakt' },
   ]

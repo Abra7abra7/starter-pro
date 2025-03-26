@@ -96,8 +96,8 @@ function Hero() {
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="gap-2 border-amber-100 text-white hover:bg-amber-700/50 shadow-lg" asChild>
-              <Link href="/degustacia">
-                Rezervovať degustáciu <Calendar className="h-4 w-4" />
+              <Link href="/ubytovanie">
+                Rezervovať ubytovanie <Calendar className="h-4 w-4" />
               </Link>
             </Button>
           </div>
