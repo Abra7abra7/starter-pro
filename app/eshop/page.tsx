@@ -2,8 +2,9 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ShoppingCart, Heart } from 'lucide-react'
+import { ShoppingCart, Heart, Info } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
@@ -161,20 +162,77 @@ function ProductCard({
   const [favorite, setFavorite] = useState(false)
   
   return (
-    <Card className="overflow-hidden">
-      <div className="relative h-48 bg-amber-50">
-        <div className="absolute top-2 right-2 z-10">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="rounded-full bg-white/80 hover:bg-white"
-            onClick={() => setFavorite(!favorite)}
-          >
-            <Heart className={favorite ? "fill-red-500 text-red-500" : "text-gray-500"} size={20} />
-          </Button>
+    <Dialog>
+      <Card className="overflow-hidden group hover:shadow-xl transition-all duration-300 border-amber-100">
+        <div className="relative h-52 bg-gradient-to-b from-amber-50/50 to-amber-100/30">
+          <div className="absolute top-3 right-3 z-10 flex gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full bg-white/90 hover:bg-white shadow-sm hover:shadow transition-all"
+              onClick={() => setFavorite(!favorite)}
+            >
+              <Heart className={favorite ? "fill-red-500 text-red-500" : "text-gray-500"} size={20} />
+            </Button>
+            <DialogTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full bg-white/90 hover:bg-white shadow-sm hover:shadow transition-all"
+              >
+                <Info className="text-amber-700" size={20} />
+              </Button>
+            </DialogTrigger>
+          </div>
+          <div className="w-full h-full flex items-center justify-center p-4">
+            <div className="relative h-44 w-28 group-hover:scale-110 transition-transform duration-500">
+              <Image 
+                src={product.image} 
+                alt={product.name}
+                fill
+                style={{ objectFit: 'contain' }}
+                className="drop-shadow-xl"
+              />
+            </div>
+          </div>
         </div>
-        <div className="w-full h-full flex items-center justify-center p-4">
-          <div className="relative h-40 w-24">
+        <CardHeader className="p-5">
+          <CardTitle className="text-xl font-semibold text-amber-900 tracking-tight">{product.name}</CardTitle>
+          <CardDescription className="text-amber-700 font-medium">
+            {product.year} • {product.price.toFixed(2)} €
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-5 pb-5">
+          <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">{product.description}</p>
+        </CardContent>
+        <CardFooter className="px-5 pb-5 flex flex-col gap-3">
+          <DialogTrigger asChild>
+            <Button 
+              variant="outline"
+              className="w-full border-amber-200 hover:bg-amber-50 shadow-sm hover:shadow-md transition-all duration-300"
+            >
+              <Info className="mr-2 h-4 w-4" />
+              Zistiť viac
+            </Button>
+          </DialogTrigger>
+          <Button 
+            className={`w-full ${inCart ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'} shadow-sm hover:shadow-md transition-all duration-300`}
+            onClick={onAddToCart}
+          >
+            {inCart ? 'Pridať ďalší' : 'Pridať do košíka'}
+          </Button>
+        </CardFooter>
+      </Card>
+      
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold text-amber-900">{product.name}</DialogTitle>
+          <DialogDescription className="text-amber-700">
+            {product.year} • {product.type.charAt(0).toUpperCase() + product.type.slice(1)} víno
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center justify-center py-4">
+          <div className="relative h-60 w-36">
             <Image 
               src={product.image} 
               alt={product.name}
@@ -183,24 +241,19 @@ function ProductCard({
             />
           </div>
         </div>
-      </div>
-      <CardHeader className="p-4">
-        <CardTitle className="text-lg font-semibold text-amber-900">{product.name}</CardTitle>
-        <CardDescription className="text-amber-700">
-          {product.year} • {product.price.toFixed(2)} €
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <p className="text-sm text-gray-600 line-clamp-3">{product.description}</p>
-      </CardContent>
-      <CardFooter className="p-4 pt-0">
-        <Button 
-          className={`w-full ${inCart ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'}`}
-          onClick={onAddToCart}
-        >
-          {inCart ? 'Pridať ďalší' : 'Pridať do košíka'}
-        </Button>
-      </CardFooter>
-    </Card>
+        <div className="space-y-4">
+          <p className="text-gray-600">{product.description}</p>
+          <div className="flex justify-between items-center">
+            <span className="text-2xl font-bold text-amber-900">{product.price.toFixed(2)} €</span>
+            <Button 
+              className={`${inCart ? 'bg-green-600 hover:bg-green-700' : 'bg-amber-600 hover:bg-amber-700'} transition-colors duration-300`}
+              onClick={onAddToCart}
+            >
+              {inCart ? 'Pridať ďalší' : 'Pridať do košíka'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

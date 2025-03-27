@@ -4,8 +4,10 @@ import { Hero } from '@/components/ui/animated-hero'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Award, Users, Wine, MapPin } from 'lucide-react'
+import { Award, Users, Wine, MapPin, Heart, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 const stats = [
   { icon: Wine, label: 'Druhov vín', value: '15+' },
@@ -15,16 +17,22 @@ const stats = [
 
 const featuredWines = [
   {
+    id: '2',
     name: 'Frankovka Modrá',
     image: '/wines/frankovka.jpg',
-    description: 'Červené víno plné ovocných tónov',
-    price: '12.90€'
+    description: 'Plné červené víno s tónmi čierneho ovocia a jemným tanínom. Výborne sa hodí k tmavému mäsu a syrom.',
+    price: 14.50,
+    type: 'cervene',
+    year: 2021
   },
   {
+    id: '1',
     name: 'Rizling Rýnsky',
     image: '/wines/rizling.jpg',
-    description: 'Svieže biele víno s minerálnym charakterom',
-    price: '11.90€'
+    description: 'Svieže biele víno s jemnou kyselinkou a ovocnými tónmi. Ideálne k rybám a ľahkým predjedlám.',
+    price: 12.90,
+    type: 'biele',
+    year: 2022
   }
 ]
 
@@ -82,34 +90,93 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center text-amber-900 mb-12">Naše vína</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {featuredWines.map((wine, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                whileHover={{ scale: 1.02 }}
-                className="group relative overflow-hidden rounded-lg shadow-lg bg-white"
-              >
-                <div className="relative h-[240px] md:h-[320px]">
-                  <Image
-                    src={wine.image}
-                    alt={wine.name}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                    className="object-cover"
-                  />
-                </div>
-                <div className="p-6 bg-white">
-                  <h3 className="text-xl font-semibold text-amber-900">{wine.name}</h3>
-                  <p className="text-amber-700 mt-2">{wine.description}</p>
-                  <div className="flex justify-between items-center mt-4">
-                    <span className="text-xl font-bold text-amber-900">{wine.price}</span>
-                    <Button asChild>
-                      <Link href="/eshop">Kúpiť</Link>
+            {featuredWines.map((wine) => (
+              <Card key={wine.id} className="overflow-hidden group hover:shadow-xl transition-all duration-300 border-amber-100">
+                <div className="relative h-52 bg-gradient-to-b from-amber-50/50 to-amber-100/30">
+                  <div className="absolute top-3 right-3 z-10">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="rounded-full bg-white/90 hover:bg-white shadow-sm hover:shadow transition-all"
+                    >
+                      <Heart className="text-gray-500" size={20} />
                     </Button>
                   </div>
+                  <div className="w-full h-full flex items-center justify-center p-4">
+                    <div className="relative h-44 w-28 group-hover:scale-110 transition-transform duration-500">
+                      <Image 
+                        src={wine.image} 
+                        alt={wine.name}
+                        fill
+                        style={{ objectFit: 'contain' }}
+                        className="drop-shadow-xl"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </motion.div>
+                <CardHeader className="p-5">
+                  <CardTitle className="text-xl font-semibold text-amber-900 tracking-tight">{wine.name}</CardTitle>
+                  <CardDescription className="text-amber-700 font-medium">
+                    {wine.year} • {wine.price.toFixed(2)} €
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="px-5 pb-5">
+                  <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">{wine.description}</p>
+                </CardContent>
+                <CardFooter className="px-5 pb-5 flex flex-col gap-3">
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline"
+                        className="w-full border-amber-200 hover:bg-amber-50 shadow-sm hover:shadow-md transition-all duration-300"
+                      >
+                        <Info className="mr-2 h-4 w-4" />
+                        Zistiť viac
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px] bg-white">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-semibold text-amber-900">{wine.name}</DialogTitle>
+                        <DialogDescription className="text-amber-700">
+                          {wine.year} • {wine.type.charAt(0).toUpperCase() + wine.type.slice(1)} víno
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="flex items-center justify-center py-4">
+                        <div className="relative h-60 w-36">
+                          <Image 
+                            src={wine.image} 
+                            alt={wine.name}
+                            fill
+                            style={{ objectFit: 'contain' }}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <p className="text-gray-600">{wine.description}</p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-2xl font-bold text-amber-900">{wine.price.toFixed(2)} €</span>
+                          <Button 
+                            className="bg-amber-600 hover:bg-amber-700"
+                            asChild
+                          >
+                            <Link href={`/eshop?product=${wine.id}`}>
+                              Kúpiť
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  <Button 
+                    className="w-full bg-amber-600 hover:bg-amber-700 shadow-sm hover:shadow-md transition-all duration-300"
+                    asChild
+                  >
+                    <Link href={`/eshop?product=${wine.id}`}>
+                      Kúpiť
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
             ))}
           </div>
         </div>
