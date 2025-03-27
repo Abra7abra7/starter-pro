@@ -7,6 +7,7 @@ export const stripe = new Stripe(
     appInfo: {
       name: 'Winery E-shop',
       version: '1.0.0'
-    }
+    },
+    typescript: true
   }
 );
