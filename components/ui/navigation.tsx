@@ -28,7 +28,7 @@ const Navigation = () => {
       <div className="container mx-auto flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/wine-logo.png" alt="Vinárstvo Putec" width={40} height={40} />
+            <Image src="/logo.svg" alt="Vinárstvo Putec" width={40} height={40} />
             <span className="text-xl font-bold text-amber-900 hidden md:inline-block">Vinárstvo Putec</span>
           </Link>
         </div>
@@ -76,7 +76,7 @@ const Navigation = () => {
               <div className="flex flex-col gap-8 py-4">
                 <div className="flex items-center justify-between">
                   <Link href="/" className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
-                    <Image src="/wine-logo.png" alt="Vinárstvo Putec" width={32} height={32} />
+                    <Image src="/logo.svg" alt="Vinárstvo Putec" width={32} height={32} />
                     <span className="text-lg font-bold text-amber-900">Vinárstvo Putec</span>
                   </Link>
                   <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>

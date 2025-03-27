@@ -43,7 +43,7 @@ function Hero() {
           <div className="bg-amber-900/30 backdrop-filter backdrop-blur-sm p-4 rounded-full">
             <div className="flex flex-row items-center gap-2">
               <Image 
-                src="/wine-logo.png" 
+                src="/logo.svg" 
                 alt="Vinárstvo Putec" 
                 width={64}
                 height={64}
