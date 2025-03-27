@@ -90,12 +90,13 @@ function Hero() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 mt-4">
+            
             <Button size="lg" className="gap-2 bg-amber-700 hover:bg-amber-800 shadow-lg" asChild>
               <Link href="/eshop">
                 Náš E-shop <ShoppingCart className="h-4 w-4" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="gap-2 border-amber-100 text-white hover:bg-amber-700/50 shadow-lg" asChild>
+            <Button size="lg" className="gap-2 bg-white text-amber-900 hover:bg-amber-100 shadow-lg font-semibold" asChild>
               <Link href="/ubytovanie">
                 Rezervovať ubytovanie <Calendar className="h-4 w-4" />
               </Link>
