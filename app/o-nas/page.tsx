@@ -4,7 +4,61 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { MapPin, Phone, Mail, Clock, Wine, Award } from 'lucide-react'
+import { MapPin, Phone, Mail, Clock, Wine, Award, Grape, Factory, Star } from 'lucide-react'
+import { motion, useInView } from 'framer-motion'
+import { useRef } from 'react'
+
+// Timeline item component
+function TimelineItem({ year, title, description, icon, side }: {
+  year: string
+  title: string
+  description: string
+  icon: React.ReactNode
+  side: 'left' | 'right'
+}) {
+  const itemRef = useRef(null)
+  const isInView = useInView(itemRef, { once: true, margin: "-100px" })
+  
+  return (
+    <div className="mb-16 relative" ref={itemRef}>
+      <motion.div 
+        className={`flex items-center gap-8 ${side === 'left' ? 'flex-row' : 'flex-row-reverse'}`}
+        initial={{ opacity: 0, x: side === 'left' ? -50 : 50 }}
+        animate={isInView ? { opacity: 1, x: 0 } : {}}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
+        {/* Content */}
+        <div className={`w-1/2 ${side === 'left' ? 'text-right' : 'text-left'}`}>
+          <motion.div 
+            className="bg-amber-50 p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+            whileHover={{ scale: 1.02 }}
+          >
+            <div className="text-2xl font-bold text-amber-800 mb-2">{year}</div>
+            <h3 className="text-xl font-semibold mb-2">{title}</h3>
+            <p className="text-gray-600">{description}</p>
+          </motion.div>
+        </div>
+
+        {/* Center icon */}
+        <div className="relative">
+          <motion.div 
+            className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center z-10 relative"
+            initial={{ scale: 0 }}
+            animate={isInView ? { scale: 1 } : {}}
+            transition={{ delay: 0.2 }}
+          >
+            <div className="text-amber-800">
+              {icon}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Empty space for the other side */}
+        <div className="w-1/2" />
+      </motion.div>
+    </div>
+  )
+}
 
 export default function AboutPage() {
   return (
@@ -42,39 +96,68 @@ export default function AboutPage() {
       
       <Separator className="my-16" />
       
-      <div className="mb-16">
-        <h2 className="text-3xl font-bold text-amber-900 mb-8 text-center">Naša história</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="text-center p-6 bg-amber-50 rounded-lg">
-            <div className="inline-flex items-center justify-center bg-amber-100 rounded-full w-16 h-16 mb-4">
-              <span className="text-2xl font-bold text-amber-800">1</span>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Začiatky (1935)</h3>
-            <p>
-              Jozef Putec zakladá rodinnú tradíciu vinohradníctva v Vinosadoch, 
-              vtedy ešte známych ako Grinava.
-            </p>
-          </div>
-          <div className="text-center p-6 bg-amber-50 rounded-lg">
-            <div className="inline-flex items-center justify-center bg-amber-100 rounded-full w-16 h-16 mb-4">
-              <span className="text-2xl font-bold text-amber-800">2</span>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Rozvoj (1970-1990)</h3>
-            <p>
-              Druhá generácia rozširuje vinice a modernizuje výrobné postupy. 
-              Začíname sa špecializovať na tradičné odrody.
-            </p>
-          </div>
-          <div className="text-center p-6 bg-amber-50 rounded-lg">
-            <div className="inline-flex items-center justify-center bg-amber-100 rounded-full w-16 h-16 mb-4">
-              <span className="text-2xl font-bold text-amber-800">3</span>
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Súčasnosť</h3>
-            <p>
-              Dnes vedú vinárstvo súrodenci Peter a Mária Putecovci, ktorí kombinujú 
-              tradičné postupy s modernými technológiami.
-            </p>
-          </div>
+      <div className="mb-24">
+        <motion.h2 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-3xl font-bold text-amber-900 mb-12 text-center"
+        >
+          Naša história
+        </motion.h2>
+        
+        <div className="relative max-w-4xl mx-auto">
+          {/* Vertical line */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-amber-200" />
+          
+          {/* Timeline items */}
+          <TimelineItem 
+            year="1935"
+            title="Začiatky"
+            description="Jozef Putec zakladá rodinnú tradíciu vinohradníctva v Vinosadoch, vtedy ešte známych ako Grinava. Začína s pestovaním prvých viničov na svahoch Malých Karpát."
+            icon={<Grape className="w-8 h-8" />}
+            side="left"
+          />
+          
+          <TimelineItem 
+            year="1955"
+            title="Prvé úspechy"
+            description="Vinárstvo sa rozrastá a získava prvé regionálne ocenenia. Rozširujeme pestovanie o nové odrody viniča typické pre našu oblasť."
+            icon={<Award className="w-8 h-8" />}
+            side="right"
+          />
+          
+          <TimelineItem 
+            year="1970"
+            title="Modernizácia"
+            description="Druhá generácia preberá vedenie. Začíname s modernizáciou výrobných postupov a rozširovaním vinohradov. Špecializujeme sa na tradičné odrody."
+            icon={<Factory className="w-8 h-8" />}
+            side="left"
+          />
+          
+          <TimelineItem 
+            year="1990"
+            title="Medzinárodný úspech"
+            description="Naše vína získavajú prvé medzinárodné ocenenia. Investujeme do najmodernejších technológií spracovania hrozna."
+            icon={<Star className="w-8 h-8" />}
+            side="right"
+          />
+          
+          <TimelineItem 
+            year="2010"
+            title="Nová éra"
+            description="Tretia generácia prináša inovácie v pestovaní a výrobe. Zavádzame ekologické postupy a získavame certifikáciu bio produkcie."
+            icon={<Wine className="w-8 h-8" />}
+            side="left"
+          />
+          
+          <TimelineItem 
+            year="Súčasnosť"
+            title="Rodinná tradícia pokračuje"
+            description="Dnes vedú vinárstvo súrodenci Peter a Mária Putecovci, ktorí kombinujú tradičné postupy s modernými technológiami. Zameriavame sa na prémiové vína a agroturistiku."
+            icon={<Award className="w-8 h-8" />}
+            side="right"
+          />
         </div>
       </div>
       
