@@ -184,16 +184,14 @@ function ProductCard({
               </Button>
             </DialogTrigger>
           </div>
-          <div className="w-full h-full flex items-center justify-center p-4">
-            <div className="relative h-44 w-28 group-hover:scale-110 transition-transform duration-500">
-              <Image 
-                src={product.image} 
-                alt={product.name}
-                fill
-                style={{ objectFit: 'contain' }}
-                className="drop-shadow-xl"
-              />
-            </div>
+          <div className="w-full h-full relative group-hover:scale-105 transition-transform duration-500">
+            <Image 
+              src={product.image} 
+              alt={product.name}
+              fill
+              style={{ objectFit: 'cover' }}
+              className="drop-shadow-xl"
+            />
           </div>
         </div>
         <CardHeader className="p-5">
