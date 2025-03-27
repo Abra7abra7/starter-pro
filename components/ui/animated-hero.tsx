@@ -45,9 +45,11 @@ function Hero() {
               <Image 
                 src="/wine-logo.png" 
                 alt="Vinárstvo Putec" 
-                width={64} 
+                width={64}
                 height={64}
-                className="drop-shadow-lg" 
+                sizes="64px"
+                className="drop-shadow-lg"
+                style={{ width: 'auto', height: '64px' }}
               />
               <span className="logo-text text-3xl font-bold text-white drop-shadow-md">Vinárstvo Putec</span>
             </div>
@@ -60,7 +62,7 @@ function Hero() {
                   <motion.span
                     key={index}
                     className="absolute font-semibold text-amber-100"
-                    initial={{ opacity: 0, y: '-100' }}
+                    initial={{ opacity: 0, y: -100 }}
                     transition={{ type: 'spring', stiffness: 50 }}
                     animate={
                       titleNumber === index
@@ -69,7 +71,7 @@ function Hero() {
                             opacity: 1,
                           }
                         : {
-                            y: titleNumber > index ? -150 : 150,
+                            y: titleNumber > index ? -100 : 100,
                             opacity: 0,
                           }
                     }
