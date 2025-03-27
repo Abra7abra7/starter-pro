@@ -19,6 +19,9 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: 'Vinárstvo Putec | Vinosady pri Pezinku',
   description: 'Rodinné vinárstvo Putec z Vinosadov pri Pezinku - kvalitné slovenské vína, degustácie a predaj priamo z vinárstva',
+  icons: {
+    icon: '/logo.svg'
+  }
 }
 
 export default function RootLayout({
