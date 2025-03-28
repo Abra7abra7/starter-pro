@@ -92,7 +92,7 @@ function StepIndicator({ step, currentStep, icon, title }: {
   return (
     <div className="flex flex-col items-center">
       <div 
-        className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center mb-1 md:mb-2
+        className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center mb-1 md:mb-2 relative z-10
           ${step === currentStep 
             ? 'bg-amber-600 text-white' 
             : step < currentStep 
@@ -292,7 +292,7 @@ export default function DegustaciaPage() {
         {/* Steps indicator */}
         <div className="max-w-3xl mx-auto mb-8">
           <div className="relative flex justify-between">
-            <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200">
+            <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200" style={{ zIndex: 0 }}>
               <div 
                 className="h-full bg-amber-600 transition-all duration-300"
                 style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
