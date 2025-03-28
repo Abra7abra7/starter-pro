@@ -256,12 +256,12 @@ export default function Home() {
               </p>
               <div className="flex items-center gap-2 text-amber-900">
                 <MapPin className="w-5 h-5" />
-                <p>Modranská 6, Vinosady</p>
+                <p>Pezinská 154, 90201 Vinosady</p>
               </div>
             </div>
             <div className="flex-1 relative h-[400px] w-full rounded-lg overflow-hidden shadow-lg">
               <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2650.4662011690386!2d17.300988776491708!3d48.33暨0123456789!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x476c9b5f8b3b3b3b%3A0x1b1b1b1b1b1b1b1b!2sVinosady!5e0!3m2!1ssk!2ssk!4v1625123456789!5m2!1ssk!2ssk"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2648.0935490071694!2d17.299772776491938!3d48.37847994073271!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x476c9c2d7a243acb%3A0x2600f7a4cde4e0c7!2sPezinsk%C3%A1%20154%2C%20902%2001%20Vinosady%2C%20Slovakia!5e0!3m2!1sen!2s!4v1711623726583!5m2!1sen!2s"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
