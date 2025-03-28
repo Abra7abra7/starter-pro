@@ -65,22 +65,45 @@ export default function Home() {
       <Hero />
       
       {/* Stats Section */}
-      <section className="py-16 bg-amber-50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.2 }}
-                className="flex flex-col items-center p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
-              >
-                <stat.icon className="w-12 h-12 text-amber-700 mb-4" />
-                <h3 className="text-4xl font-bold text-amber-900 mb-2">{stat.value}</h3>
-                <p className="text-amber-700">{stat.label}</p>
-              </motion.div>
-            ))}
+      <section className="relative py-24 bg-gradient-to-b from-amber-50 to-white overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(#f59e0b_1px,transparent_1px)] [background-size:16px_16px] opacity-30"></div>
+        <div className="container relative mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-16">
+              {stats.map((stat, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ 
+                    type: "spring",
+                    stiffness: 100,
+                    damping: 10,
+                    delay: index * 0.1 
+                  }}
+                  className="relative group"
+                >
+                  <div className="absolute -inset-1 bg-gradient-to-r from-amber-100 to-amber-200 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
+                  <div className="relative flex flex-col items-center p-8 bg-white rounded-lg shadow-xl hover:shadow-2xl transition-all duration-300">
+                    <div className="relative">
+                      <div className="absolute -inset-4 bg-amber-100 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-300"></div>
+                      <stat.icon className="relative w-12 h-12 text-amber-800 transform group-hover:scale-110 transition-transform duration-300" />
+                    </div>
+                    <motion.h3 
+                      className="text-5xl font-bold bg-gradient-to-r from-amber-700 to-amber-900 bg-clip-text text-transparent mt-6 mb-3"
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.2 + 0.3 }}
+                    >
+                      {stat.value}
+                    </motion.h3>
+                    <p className="text-lg font-medium text-amber-700 text-center">{stat.label}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
