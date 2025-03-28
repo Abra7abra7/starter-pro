@@ -92,7 +92,7 @@ function StepIndicator({ step, currentStep, icon, title }: {
   return (
     <div className="flex flex-col items-center">
       <div 
-        className={`w-12 h-12 rounded-full flex items-center justify-center mb-2
+        className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center mb-1 md:mb-2
           ${step === currentStep 
             ? 'bg-amber-600 text-white' 
             : step < currentStep 
@@ -100,9 +100,11 @@ function StepIndicator({ step, currentStep, icon, title }: {
               : 'bg-gray-100 text-gray-400'
           }`}
       >
-        {icon}
+        <div className="scale-75 md:scale-100">
+          {icon}
+        </div>
       </div>
-      <span className={`text-sm ${step === currentStep ? 'text-amber-800 font-medium' : 'text-gray-500'}`}>
+      <span className={`text-xs md:text-sm ${step === currentStep ? 'text-amber-800 font-medium' : 'text-gray-500'} hidden md:block`}>
         {title}
       </span>
     </div>
@@ -225,27 +227,27 @@ export default function DegustaciaPage() {
       whileHover={{ scale: 1.01 }}
       className="mb-4"
     >
-      <div className="flex items-start space-x-4 p-4 rounded-lg border border-gray-200 hover:border-amber-200 hover:bg-amber-50/50 transition-colors cursor-pointer"
+      <div className="flex items-start space-x-3 md:space-x-4 p-3 md:p-4 rounded-lg border border-gray-200 hover:border-amber-200 hover:bg-amber-50/50 transition-colors cursor-pointer"
         onClick={() => setSelectedTasting(option.id)}
       >
         <RadioGroupItem value={option.id} id={option.id} className="mt-1" />
         <div className="grid gap-1.5 leading-none w-full">
             <div className="flex justify-between items-center">
-              <Label htmlFor={option.id} className="text-lg font-medium">{option.name}</Label>
+              <Label htmlFor={option.id} className="text-base md:text-lg font-medium">{option.name}</Label>
               <span className="font-bold text-amber-800">{option.price} € / osoba</span>
             </div>
-            <p className="text-sm text-muted-foreground">{option.description}</p>
-            <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
-              <div className="flex items-center gap-1">
-                <Clock size={16} />
+            <p className="text-xs md:text-sm text-muted-foreground">{option.description}</p>
+            <div className="flex flex-wrap gap-2 md:gap-4 mt-2 text-xs md:text-sm text-gray-600">
+              <div className="flex items-center gap-0.5 md:gap-1">
+                <Clock size={14} className="md:w-4 md:h-4" />
                 <span>{option.duration} minút</span>
               </div>
-              <div className="flex items-center gap-1">
-                <Users size={16} />
+              <div className="flex items-center gap-0.5 md:gap-1">
+                <Users size={14} className="md:w-4 md:h-4" />
                 <span>Max. {option.capacity} osôb</span>
               </div>
-              <div className="flex items-center gap-1">
-                <Wine size={16} />
+              <div className="flex items-center gap-0.5 md:gap-1">
+                <Wine size={14} className="md:w-4 md:h-4" />
                 <span>{option.id === 'basic' ? '6 vín' : option.id === 'premium' ? '8 vín' : '10 vín'}</span>
               </div>
             </div>
@@ -257,7 +259,7 @@ export default function DegustaciaPage() {
   return (
     <div>
       {/* Hero section */}
-      <div className="relative h-[300px] mb-12">
+      <div className="relative h-[200px] md:h-[300px] mb-8 md:mb-12">
         <Image
           src="/about/experience3.webp"
           alt="Degustácia vína"
@@ -268,7 +270,7 @@ export default function DegustaciaPage() {
         />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-4">
           <motion.h1 
-            className="text-4xl md:text-5xl font-bold mb-4"
+            className="text-3xl md:text-5xl font-bold mb-2 md:mb-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
@@ -276,7 +278,7 @@ export default function DegustaciaPage() {
             Rezervácia degustácie
           </motion.h1>
           <motion.p 
-            className="text-lg md:text-xl max-w-2xl"
+            className="text-base md:text-xl max-w-2xl"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -286,9 +288,9 @@ export default function DegustaciaPage() {
         </div>
       </div>
 
-      <div className="container mx-auto pb-10">
+      <div className="container mx-auto pb-10 px-4">
         {/* Steps indicator */}
-        <div className="max-w-3xl mx-auto mb-12">
+        <div className="max-w-3xl mx-auto mb-8">
           <div className="relative flex justify-between">
             <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200">
               <div 
@@ -326,28 +328,42 @@ export default function DegustaciaPage() {
 
         <div className="max-w-3xl mx-auto">
           <Card>
-            <CardContent className="p-6">
-              {/* Tasting selection */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Vyberte typ degustácie</h3>
-                <RadioGroup value={selectedTasting || ''} onValueChange={setSelectedTasting}>
-                  {tastingOptions.map(option => (
-                    <TastingOption key={option.id} option={option} />
-                  ))}
-                </RadioGroup>
-              </div>
-
-              {/* Date and time selection */}
-              {selectedTasting && (
+            <CardContent className="p-4 md:p-6">
+              {/* Step 1: Tasting selection */}
+              {currentStep === 1 && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  transition={{ duration: 0.3 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                 >
-                  <Separator className="my-8" />
-                  <div className="space-y-6">
-                    <h3 className="text-lg font-semibold mb-4">Vyberte termín</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <h3 className="text-lg font-semibold mb-3 md:mb-4">Vyberte typ degustácie</h3>
+                  <RadioGroup value={selectedTasting || ''} onValueChange={setSelectedTasting}>
+                    {tastingOptions.map(option => (
+                      <TastingOption key={option.id} option={option} />
+                    ))}
+                  </RadioGroup>
+                  <div className="mt-4 md:mt-6 flex justify-end">
+                    <Button
+                      onClick={() => selectedTasting && setSelectedDate(undefined)}
+                      disabled={!selectedTasting}
+                      className="bg-amber-700 hover:bg-amber-800"
+                    >
+                      Pokračovať
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 2: Date and time selection */}
+              {currentStep === 2 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <div className="space-y-4 md:space-y-6">
+                    <h3 className="text-lg font-semibold mb-3 md:mb-4">Vyberte termín</h3>
+                    <div className="grid gap-6">
                       <div>
                         <Label>Dátum</Label>
                         <div className="mt-2">
@@ -355,7 +371,7 @@ export default function DegustaciaPage() {
                             mode="single"
                             selected={selectedDate}
                             onSelect={handleDateSelect}
-                            className="border rounded-md p-2"
+                            className="border rounded-md p-1 md:p-2 mx-auto scale-90 md:scale-100 origin-top"
                             disabled={(date) => {
                               return !availableDates.some(
                                 availableDate => 
@@ -419,18 +435,36 @@ export default function DegustaciaPage() {
                       </div>
                     </div>
                   </div>
+                  <div className="mt-4 md:mt-6 flex justify-between">
+                    <Button
+                      variant="outline"
+                      onClick={() => setSelectedTasting(null)}
+                    >
+                      Späť
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (selectedDate && selectedTime) {
+                          setContactInfo({ name: '', email: '', phone: '' })
+                        }
+                      }}
+                      disabled={!selectedDate || !selectedTime}
+                      className="bg-amber-700 hover:bg-amber-800"
+                    >
+                      Pokračovať
+                    </Button>
+                  </div>
                 </motion.div>
               )}
 
-              {/* Contact information */}
-              {selectedDate && selectedTime && (
+              {/* Step 3: Contact information */}
+              {currentStep === 3 && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  transition={{ duration: 0.3 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                 >
-                  <Separator className="my-8" />
-                  <div className="space-y-6">
+                  <div className="space-y-4 md:space-y-6">
                     <h3 className="text-lg font-semibold mb-4">Kontaktné údaje</h3>
                     <div className="grid gap-4">
                       <div>
@@ -464,19 +498,40 @@ export default function DegustaciaPage() {
                       </div>
                     </div>
                   </div>
+                  <div className="mt-6 flex justify-between">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedDate(undefined)
+                        setSelectedTime(null)
+                      }}
+                    >
+                      Späť
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        if (contactInfo.name && contactInfo.email && contactInfo.phone) {
+                          // Continue to summary
+                        }
+                      }}
+                      disabled={!contactInfo.name || !contactInfo.email || !contactInfo.phone}
+                      className="bg-amber-700 hover:bg-amber-800"
+                    >
+                      Pokračovať
+                    </Button>
+                  </div>
                 </motion.div>
               )}
 
-              {/* Summary and payment */}
-              {isFormComplete() && (
+              {/* Step 4: Summary and payment */}
+              {currentStep === 4 && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  transition={{ duration: 0.3 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                 >
-                  <Separator className="my-8" />
                   <div className="space-y-6">
-                    <div className="bg-amber-50 rounded-lg p-6">
+                    <div className="bg-amber-50 rounded-lg p-4 md:p-6">
                       <h3 className="text-lg font-semibold mb-4">Súhrn rezervácie</h3>
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
@@ -512,23 +567,31 @@ export default function DegustaciaPage() {
                       </div>
                     </div>
                     
-                    <Button 
-                      className="w-full bg-amber-700 hover:bg-amber-800"
-                      disabled={isLoading}
-                      onClick={handleReservation}
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Presmerovanie na platbu...
-                        </>
-                      ) : (
-                        <>
-                          Rezervovať a zaplatiť
-                          <Euro className="ml-2 h-4 w-4" />
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex justify-between">
+                      <Button
+                        variant="outline"
+                        onClick={() => setContactInfo({ name: '', email: '', phone: '' })}
+                      >
+                        Späť
+                      </Button>
+                      <Button 
+                        className="bg-amber-700 hover:bg-amber-800"
+                        disabled={isLoading}
+                        onClick={handleReservation}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Presmerovanie na platbu...
+                          </>
+                        ) : (
+                          <>
+                            Rezervovať a zaplatiť
+                            <Euro className="ml-2 h-4 w-4" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </motion.div>
               )}
